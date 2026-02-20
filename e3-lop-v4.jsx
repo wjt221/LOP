@@ -932,7 +932,9 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
 
 function DashboardView({ goals, company, members, currentUser, onGoalClick, onAddGoal }) {
   const cg = goals.filter(g => g.companyId === company.id);
-  const [selectedMemberId, setSelectedMemberId] = useState(currentUser?.id || members[0]?.id);
+  const [selectedMemberId, setSelectedMemberId] = useState(
+    members.find(m => m.id === currentUser?.id)?.id || members[0]?.id
+  );
   const [showAddForm, setShowAddForm] = useState(false);
 
   const currentMonthIdx = new Date().getMonth();
@@ -1605,7 +1607,8 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
       g.metric?.toLowerCase().includes(q) ||
       g.description?.toLowerCase().includes(q)
     );
-  }, [cg, search]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goals, company.id, search]);
 
   const searching = search.trim().length > 0;
   const l1Goals = searching
@@ -1828,7 +1831,8 @@ function ChartsView({ goals, company }) {
       });
       return entry;
     }).filter(e => ORG_LEVELS.some(lv => e[lv.id] !== null));
-  }, [cg]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goals, company.id]);
 
   const card = "bg-white rounded-2xl border shadow-sm p-6";
   return (
@@ -2182,7 +2186,7 @@ export default function E3LevelOrderPlanning() {
           // Preserve any childGoalId already stored on the matching strategy so
           // editing a parent goal never breaks its existing child-goal links.
           const existing = modal.goal.strategies?.find?.(es =>
-            (typeof es === "string" ? es : es.text) === s.text && es.childGoalId
+            (typeof es === "string" ? es : es.text) === s.text
           );
           return existing ? { ...s, childGoalId: s.childGoalId || existing.childGoalId } : s;
         });
@@ -2192,29 +2196,28 @@ export default function E3LevelOrderPlanning() {
         // Create child goals for any new strategies that don't have a childGoalId yet
         const childLevel = nextLevel[form.orgLevel];
         if (childLevel) {
-          updatedStrategies.forEach((s, i) => {
-            if (s.text.trim() && !s.childGoalId) {
-              const childId = genId();
-              goals.push({
-                id: childId,
-                companyId: form.companyId,
-                orgLevel: childLevel,
-                type: typeForLevel[childLevel],
-                cascade: form.cascade,
-                title: s.text,
-                metric: "",
-                description: `Cascaded from ${form.orgLevel} goal: ${form.title}`,
-                owner: s.ownerId || form.owner,
-                dueDate: form.dueDate,
-                parentId: savedGoalId,
-                strategies: [],
-                scorecard: { ...emptyScorecard },
-                comments: [],
-              });
-              // Link childGoalId back on the strategy
-              goals[idx].strategies[i] = { ...s, childGoalId: childId };
-            }
+          const linkedStrategies = updatedStrategies.map(s => {
+            if (!s.text.trim() || s.childGoalId) return s;
+            const childId = genId();
+            goals.push({
+              id: childId,
+              companyId: form.companyId,
+              orgLevel: childLevel,
+              type: typeForLevel[childLevel],
+              cascade: form.cascade,
+              title: s.text,
+              metric: "",
+              description: `Cascaded from ${form.orgLevel} goal: ${form.title}`,
+              owner: s.ownerId || form.owner,
+              dueDate: form.dueDate,
+              parentId: savedGoalId,
+              strategies: [],
+              scorecard: { ...emptyScorecard },
+              comments: [],
+            });
+            return { ...s, childGoalId: childId };
           });
+          goals[idx] = { ...goals[idx], strategies: linkedStrategies };
         }
       } else {
         // ── New goal ──────────────────────────────────────────────────────
