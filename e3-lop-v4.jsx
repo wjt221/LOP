@@ -521,7 +521,7 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
 
           <div className="divide-y" style={{ borderColor: E3.border }}>
             {form.strategies.map((s, i) => (
-              <div key={i} className="p-4 space-y-2.5">
+              <div key={s.childGoalId || `strat-${i}`} className="p-4 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-xs font-black"
                     style={{ backgroundColor: E3.accentLight, color: E3.accent }}>{i + 1}</div>
@@ -680,7 +680,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
               const stratOwner = members.find(m => m.id === stratObj.ownerId);
               const childGoal = allGoals.find(g => g.id === stratObj.childGoalId);
               return (
-                <div key={i} className="px-4 py-3">
+                <div key={stratObj.childGoalId || `strat-${i}`} className="px-4 py-3">
                   <div className="flex items-start gap-3">
                     <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black"
                       style={{ backgroundColor: E3.accentLight, color: E3.accent }}>{i + 1}</div>
@@ -697,7 +697,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
                           <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
                             style={{ backgroundColor: "#d1fae5", color: "#059669" }}>
                             <ChevronRight size={10} />
-                            {childGoal.orgLevel} Goal: {childGoal.title.slice(0, 50)}{childGoal.title.length > 50 ? "…" : ""}
+                            {childGoal.orgLevel} Goal: {(childGoal.title || "").slice(0, 50)}{(childGoal.title?.length ?? 0) > 50 ? "…" : ""}
                           </span>
                         ) : (
                           <span className="text-xs px-2 py-0.5 rounded-full"
@@ -1356,7 +1356,7 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               <div className="grid gap-2 mt-0"
                 style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
                 {allColumns.map((col, i) => (
-                  <div key={i} className="flex flex-col items-center">
+                  <div key={col.childGoal?.id || col.childGoalId || `col-${i}`} className="flex flex-col items-center">
                     {/* Drop line */}
                     <div style={{ width: 2, height: 12, backgroundColor: E3.border }} />
 
@@ -1540,7 +1540,7 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               {/* Strategy labels + drop lines above each L2 card */}
               <div className="grid gap-4 mt-0" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
                 {allColumns.map((col, i) => (
-                  <div key={i} className="flex flex-col items-center">
+                  <div key={col.childGoal?.id || col.childGoalId || `col-${i}`} className="flex flex-col items-center">
                     {/* Drop line */}
                     <div style={{ width: 2, height: 16, backgroundColor: E3.border }} />
 
@@ -1601,7 +1601,7 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
     if (!search.trim()) return cg;
     const q = search.toLowerCase();
     return cg.filter(g =>
-      g.title.toLowerCase().includes(q) ||
+      g.title?.toLowerCase().includes(q) ||
       g.metric?.toLowerCase().includes(q) ||
       g.description?.toLowerCase().includes(q)
     );
@@ -1854,7 +1854,7 @@ function ChartsView({ goals, company }) {
             <ResponsiveContainer width={150} height={150}>
               <PieChart>
                 <Pie data={coreVsFlank} cx="50%" cy="50%" innerRadius={42} outerRadius={65} dataKey="value" paddingAngle={3}>
-                  {coreVsFlank.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  {coreVsFlank.map((d) => <Cell key={d.name} fill={d.color} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
@@ -1908,7 +1908,7 @@ function MeetingView({ goals, company, members }) {
   const today = new Date();
   const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
   const needsAttention = cg.filter(g => ["yellow","red"].includes(getGoalStatus(g)));
-  const dueSoon = cg.filter(g => { if (!g.dueDate) return false; const d = new Date(g.dueDate); return d >= today && d <= nextWeek; });
+  const dueSoon = cg.filter(g => { if (!g.dueDate) return false; const d = new Date(g.dueDate); if (isNaN(d.getTime())) return false; return d >= today && d <= nextWeek; });
   const withComments = cg.filter(g => g.comments?.length > 0);
   const dateStr = today.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
@@ -2167,6 +2167,11 @@ export default function E3LevelOrderPlanning() {
     const emptyScorecard = Object.fromEntries(MONTHS.map(m => [m, null]));
 
     setData(d => {
+      // Monotonic counter ensures unique IDs even when multiple goals are
+      // created in the same millisecond (e.g. parent + several child goals).
+      let _idSeq = Date.now();
+      const genId = () => `g${_idSeq++}`;
+
       const goals = [...d.goals];
       let savedGoalId;
 
@@ -2189,7 +2194,7 @@ export default function E3LevelOrderPlanning() {
         if (childLevel) {
           updatedStrategies.forEach((s, i) => {
             if (s.text.trim() && !s.childGoalId) {
-              const childId = `g${Date.now()}${i}`;
+              const childId = genId();
               goals.push({
                 id: childId,
                 companyId: form.companyId,
@@ -2213,13 +2218,13 @@ export default function E3LevelOrderPlanning() {
         }
       } else {
         // ── New goal ──────────────────────────────────────────────────────
-        const parentGoalId = `g${Date.now()}`;
+        const parentGoalId = genId();
         const childLevel = nextLevel[form.orgLevel];
 
         // Create child goals first and link them
         const linkedStrategies = (form.strategies || []).map((s, i) => {
           if (!s.text?.trim() || !childLevel) return s;
-          const childId = `g${Date.now()}${i + 1}`;
+          const childId = genId();
           goals.push({
             id: childId,
             companyId: form.companyId,
@@ -2276,7 +2281,7 @@ export default function E3LevelOrderPlanning() {
     setData(d => ({
       ...d,
       goals: d.goals.map(g => g.id === goalId
-        ? { ...g, comments: [...(g.comments || []), { id: `cm${Date.now()}`, userId: currentUser.id, text, date: new Date().toISOString().slice(0,10) }] }
+        ? { ...g, comments: [...(g.comments || []), { id: `cm${Date.now()}`, userId: currentUser?.id, text, date: new Date().toISOString().slice(0,10) }] }
         : g)
     }));
   };
