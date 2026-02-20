@@ -8,7 +8,7 @@ import {
   AlertTriangle, Plus, X, Edit2, MessageSquare,
   BarChart2, FileText, Menu, Layers, Home,
   Users, Mail, Shield, Eye, PenTool, ArrowRight,
-  TrendingUp, Trash2, Search, Printer, CheckCircle
+  TrendingUp, Trash2, Search, Printer
 } from "lucide-react";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
@@ -1346,7 +1346,7 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               {allColumns.length > 1 && (
                 <div className="flex justify-center">
                   <div style={{
-                    width: `${Math.min((allColumns.length - 1) * 34, 96)}%`,
+                    width: `${Math.min((colCount - 1) * 34, 96)}%`,
                     height: 2, backgroundColor: E3.border
                   }} />
                 </div>
@@ -1532,7 +1532,7 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               {/* Horizontal branch line spanning all columns */}
               {allColumns.length > 1 && (
                 <div className="flex justify-center mb-0">
-                  <div style={{ width: `${(allColumns.length - 1) * (100 / allColumns.length)}%`,
+                  <div style={{ width: `${(colCount - 1) * (100 / colCount)}%`,
                     height: 2, backgroundColor: E3.border, maxWidth: 900 }} />
                 </div>
               )}
@@ -2174,12 +2174,14 @@ export default function E3LevelOrderPlanning() {
         // ── Editing existing goal ──────────────────────────────────────────
         const idx = goals.findIndex(g => g.id === modal.goal.id);
         const updatedStrategies = form.strategies.map(s => {
+          // Preserve any childGoalId already stored on the matching strategy so
+          // editing a parent goal never breaks its existing child-goal links.
           const existing = modal.goal.strategies?.find?.(es =>
-            (typeof es === "string" ? es : es.text) === s.text && s.childGoalId
+            (typeof es === "string" ? es : es.text) === s.text && es.childGoalId
           );
-          return existing ? { ...s, childGoalId: existing.childGoalId || s.childGoalId } : s;
+          return existing ? { ...s, childGoalId: s.childGoalId || existing.childGoalId } : s;
         });
-        goals[idx] = { ...goals[idx], ...form, strategies: updatedStrategies };
+        goals[idx] = { ...goals[idx], ...form, strategies: updatedStrategies, parentId: goals[idx].parentId };
         savedGoalId = modal.goal.id;
 
         // Create child goals for any new strategies that don't have a childGoalId yet
@@ -2196,7 +2198,7 @@ export default function E3LevelOrderPlanning() {
                 cascade: form.cascade,
                 title: s.text,
                 metric: "",
-                description: `Cascaded from L${childLevel.slice(1) - 1} goal: ${form.title}`,
+                description: `Cascaded from ${form.orgLevel} goal: ${form.title}`,
                 owner: s.ownerId || form.owner,
                 dueDate: form.dueDate,
                 parentId: savedGoalId,
