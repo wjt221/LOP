@@ -8,7 +8,7 @@ import {
   AlertTriangle, Plus, X, Edit2, MessageSquare,
   BarChart2, FileText, Menu, Layers, Home,
   Users, Mail, Shield, Eye, PenTool, ArrowRight,
-  TrendingUp, Trash2, Search, Printer, CheckCircle
+  TrendingUp, Trash2, Search, Printer
 } from "lucide-react";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
@@ -285,6 +285,12 @@ async function saveData(d) {
   try { await window.storage.set("e3_lop_v4", JSON.stringify(d)); } catch {}
 }
 
+// Monotonic counter used for ALL ID generation — guarantees uniqueness even
+// when multiple items are created in the same millisecond (e.g. cascading
+// child goals, rapid comments, invite + goal in the same tick).
+let _idSeq = Date.now();
+const genId = (prefix = "g") => `${prefix}${_idSeq++}`;
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function getGoalStatus(goal) {
   const months = MONTHS.map(m => goal.scorecard?.[m]).filter(Boolean);
@@ -521,7 +527,7 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
 
           <div className="divide-y" style={{ borderColor: E3.border }}>
             {form.strategies.map((s, i) => (
-              <div key={i} className="p-4 space-y-2.5">
+              <div key={s.childGoalId || `strat-${i}`} className="p-4 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-xs font-black"
                     style={{ backgroundColor: E3.accentLight, color: E3.accent }}>{i + 1}</div>
@@ -671,7 +677,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
               Strategies → Cascade Down
             </div>
             <span className="text-xs ml-auto" style={{ color: E3.muted }}>
-              {goal.strategies.filter(s => s.childGoalId).length} of {goal.strategies.length} linked to child goals
+              {goal.strategies.filter(s => (typeof s === "string" ? null : s.childGoalId)).length} of {goal.strategies.length} linked to child goals
             </span>
           </div>
           <div className="divide-y" style={{ borderColor: E3.border }}>
@@ -680,7 +686,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
               const stratOwner = members.find(m => m.id === stratObj.ownerId);
               const childGoal = allGoals.find(g => g.id === stratObj.childGoalId);
               return (
-                <div key={i} className="px-4 py-3">
+                <div key={stratObj.childGoalId || `strat-${i}`} className="px-4 py-3">
                   <div className="flex items-start gap-3">
                     <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black"
                       style={{ backgroundColor: E3.accentLight, color: E3.accent }}>{i + 1}</div>
@@ -697,7 +703,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
                           <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
                             style={{ backgroundColor: "#d1fae5", color: "#059669" }}>
                             <ChevronRight size={10} />
-                            {childGoal.orgLevel} Goal: {childGoal.title.slice(0, 50)}{childGoal.title.length > 50 ? "…" : ""}
+                            {childGoal.orgLevel} Goal: {(childGoal.title || "").slice(0, 50)}{(childGoal.title?.length ?? 0) > 50 ? "…" : ""}
                           </span>
                         ) : (
                           <span className="text-xs px-2 py-0.5 rounded-full"
@@ -827,7 +833,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
     if (!form.title.trim()) return;
     onSave({
       ...form,
-      id: `g${Date.now()}`,
+      id: genId(),
       companyId,
       parentId: null,
       comments: [],
@@ -932,7 +938,9 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
 
 function DashboardView({ goals, company, members, currentUser, onGoalClick, onAddGoal }) {
   const cg = goals.filter(g => g.companyId === company.id);
-  const [selectedMemberId, setSelectedMemberId] = useState(currentUser?.id || members[0]?.id);
+  const [selectedMemberId, setSelectedMemberId] = useState(
+    members.find(m => m.id === currentUser?.id)?.id || members[0]?.id
+  );
   const [showAddForm, setShowAddForm] = useState(false);
 
   const currentMonthIdx = new Date().getMonth();
@@ -1003,7 +1011,7 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
                 }}>
                 <Avatar name={m.name} size={7} />
                 <div className="text-left">
-                  <div className="text-xs font-black leading-tight" style={{ color: isSelected ? E3.navy : E3.navy }}>
+                  <div className="text-xs font-black leading-tight" style={{ color: E3.navy }}>
                     {m.name}{m.id === currentUser?.id && <span className="ml-1 font-normal" style={{ color: E3.accent }}>(you)</span>}
                   </div>
                   <div className="text-xs leading-tight" style={{ color: E3.muted }}>
@@ -1346,7 +1354,7 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               {allColumns.length > 1 && (
                 <div className="flex justify-center">
                   <div style={{
-                    width: `${Math.min((allColumns.length - 1) * 34, 96)}%`,
+                    width: `${Math.min((colCount - 1) * 34, 96)}%`,
                     height: 2, backgroundColor: E3.border
                   }} />
                 </div>
@@ -1356,7 +1364,7 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               <div className="grid gap-2 mt-0"
                 style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
                 {allColumns.map((col, i) => (
-                  <div key={i} className="flex flex-col items-center">
+                  <div key={col.childGoal?.id || col.childGoalId || `col-${i}`} className="flex flex-col items-center">
                     {/* Drop line */}
                     <div style={{ width: 2, height: 12, backgroundColor: E3.border }} />
 
@@ -1532,7 +1540,7 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               {/* Horizontal branch line spanning all columns */}
               {allColumns.length > 1 && (
                 <div className="flex justify-center mb-0">
-                  <div style={{ width: `${(allColumns.length - 1) * (100 / allColumns.length)}%`,
+                  <div style={{ width: `${(colCount - 1) * (100 / colCount)}%`,
                     height: 2, backgroundColor: E3.border, maxWidth: 900 }} />
                 </div>
               )}
@@ -1540,7 +1548,7 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               {/* Strategy labels + drop lines above each L2 card */}
               <div className="grid gap-4 mt-0" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
                 {allColumns.map((col, i) => (
-                  <div key={i} className="flex flex-col items-center">
+                  <div key={col.childGoal?.id || col.childGoalId || `col-${i}`} className="flex flex-col items-center">
                     {/* Drop line */}
                     <div style={{ width: 2, height: 16, backgroundColor: E3.border }} />
 
@@ -1601,11 +1609,12 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
     if (!search.trim()) return cg;
     const q = search.toLowerCase();
     return cg.filter(g =>
-      g.title.toLowerCase().includes(q) ||
+      g.title?.toLowerCase().includes(q) ||
       g.metric?.toLowerCase().includes(q) ||
       g.description?.toLowerCase().includes(q)
     );
-  }, [cg, search]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goals, company.id, search]);
 
   const searching = search.trim().length > 0;
   const l1Goals = searching
@@ -1828,7 +1837,8 @@ function ChartsView({ goals, company }) {
       });
       return entry;
     }).filter(e => ORG_LEVELS.some(lv => e[lv.id] !== null));
-  }, [cg]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goals, company.id]);
 
   const card = "bg-white rounded-2xl border shadow-sm p-6";
   return (
@@ -1854,7 +1864,7 @@ function ChartsView({ goals, company }) {
             <ResponsiveContainer width={150} height={150}>
               <PieChart>
                 <Pie data={coreVsFlank} cx="50%" cy="50%" innerRadius={42} outerRadius={65} dataKey="value" paddingAngle={3}>
-                  {coreVsFlank.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  {coreVsFlank.map((d) => <Cell key={d.name} fill={d.color} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
@@ -1908,7 +1918,7 @@ function MeetingView({ goals, company, members }) {
   const today = new Date();
   const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
   const needsAttention = cg.filter(g => ["yellow","red"].includes(getGoalStatus(g)));
-  const dueSoon = cg.filter(g => { if (!g.dueDate) return false; const d = new Date(g.dueDate); return d >= today && d <= nextWeek; });
+  const dueSoon = cg.filter(g => { if (!g.dueDate) return false; const d = new Date(g.dueDate); if (isNaN(d.getTime())) return false; return d >= today && d <= nextWeek; });
   const withComments = cg.filter(g => g.comments?.length > 0);
   const dateStr = today.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
@@ -2131,7 +2141,7 @@ function InviteForm({ onSave, onClose }) {
       <div className="flex gap-3 pt-2">
         <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-black border hover:bg-gray-50"
           style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
-        <button onClick={() => email && onSave(email, role)}
+        <button onClick={() => email.trim() && onSave(email.trim(), role)}
           className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white"
           style={{ backgroundColor: E3.navy }}>
           <Mail size={13} /> Send Invite
@@ -2153,7 +2163,7 @@ export default function E3LevelOrderPlanning() {
   useEffect(() => { loadData().then(d => { setData(d || SEED); setLoading(false); }); }, []);
   useEffect(() => { if (data) saveData(data); }, [data]);
 
-  const company = data?.companies.find(c => c.id === activeCompanyId);
+  const company = data?.companies.find(c => c.id === activeCompanyId) || data?.companies?.[0];
   const members = company?.members || [];
   const currentUser = data?.currentUser;
   const isSuperAdmin = currentUser?.role === "superadmin";
@@ -2173,51 +2183,53 @@ export default function E3LevelOrderPlanning() {
       if (modal?.goal) {
         // ── Editing existing goal ──────────────────────────────────────────
         const idx = goals.findIndex(g => g.id === modal.goal.id);
+        if (idx === -1) return d; // goal was deleted before save completed
         const updatedStrategies = form.strategies.map(s => {
+          // Preserve any childGoalId already stored on the matching strategy so
+          // editing a parent goal never breaks its existing child-goal links.
           const existing = modal.goal.strategies?.find?.(es =>
-            (typeof es === "string" ? es : es.text) === s.text && s.childGoalId
+            (typeof es === "string" ? es : es.text) === s.text
           );
-          return existing ? { ...s, childGoalId: existing.childGoalId || s.childGoalId } : s;
+          return existing ? { ...s, childGoalId: s.childGoalId || existing.childGoalId } : s;
         });
-        goals[idx] = { ...goals[idx], ...form, strategies: updatedStrategies };
+        goals[idx] = { ...goals[idx], ...form, strategies: updatedStrategies, parentId: goals[idx].parentId };
         savedGoalId = modal.goal.id;
 
         // Create child goals for any new strategies that don't have a childGoalId yet
         const childLevel = nextLevel[form.orgLevel];
         if (childLevel) {
-          updatedStrategies.forEach((s, i) => {
-            if (s.text.trim() && !s.childGoalId) {
-              const childId = `g${Date.now()}${i}`;
-              goals.push({
-                id: childId,
-                companyId: form.companyId,
-                orgLevel: childLevel,
-                type: typeForLevel[childLevel],
-                cascade: form.cascade,
-                title: s.text,
-                metric: "",
-                description: `Cascaded from L${childLevel.slice(1) - 1} goal: ${form.title}`,
-                owner: s.ownerId || form.owner,
-                dueDate: form.dueDate,
-                parentId: savedGoalId,
-                strategies: [],
-                scorecard: { ...emptyScorecard },
-                comments: [],
-              });
-              // Link childGoalId back on the strategy
-              goals[idx].strategies[i] = { ...s, childGoalId: childId };
-            }
+          const linkedStrategies = updatedStrategies.map(s => {
+            if (!s.text.trim() || s.childGoalId) return s;
+            const childId = genId();
+            goals.push({
+              id: childId,
+              companyId: form.companyId,
+              orgLevel: childLevel,
+              type: typeForLevel[childLevel],
+              cascade: form.cascade,
+              title: s.text,
+              metric: "",
+              description: `Cascaded from ${form.orgLevel} goal: ${form.title}`,
+              owner: s.ownerId || form.owner,
+              dueDate: form.dueDate,
+              parentId: savedGoalId,
+              strategies: [],
+              scorecard: { ...emptyScorecard },
+              comments: [],
+            });
+            return { ...s, childGoalId: childId };
           });
+          goals[idx] = { ...goals[idx], strategies: linkedStrategies };
         }
       } else {
         // ── New goal ──────────────────────────────────────────────────────
-        const parentGoalId = `g${Date.now()}`;
+        const parentGoalId = genId();
         const childLevel = nextLevel[form.orgLevel];
 
         // Create child goals first and link them
         const linkedStrategies = (form.strategies || []).map((s, i) => {
           if (!s.text?.trim() || !childLevel) return s;
-          const childId = `g${Date.now()}${i + 1}`;
+          const childId = genId();
           goals.push({
             id: childId,
             companyId: form.companyId,
@@ -2274,7 +2286,7 @@ export default function E3LevelOrderPlanning() {
     setData(d => ({
       ...d,
       goals: d.goals.map(g => g.id === goalId
-        ? { ...g, comments: [...(g.comments || []), { id: `cm${Date.now()}`, userId: currentUser.id, text, date: new Date().toISOString().slice(0,10) }] }
+        ? { ...g, comments: [...(g.comments || []), { id: genId("cm"), userId: currentUser?.id, text, date: new Date().toISOString().slice(0,10) }] }
         : g)
     }));
   };
@@ -2292,7 +2304,7 @@ export default function E3LevelOrderPlanning() {
     setData(d => ({
       ...d,
       companies: d.companies.map(c => c.id === activeCompanyId
-        ? { ...c, members: [...c.members, { id: `u${Date.now()}`, name: email.split("@")[0], email, role }] }
+        ? { ...c, members: [...c.members, { id: genId("u"), name: email.split("@")[0] || email, email, role }] }
         : c)
     }));
     closeModal();
@@ -2424,7 +2436,7 @@ export default function E3LevelOrderPlanning() {
 
       {/* Modals */}
       {modal?.type === "detail" && (() => {
-        const liveGoal = data.goals.find(g => g.id === modal.goal.id) || modal.goal;
+        const liveGoal = data.goals.find(g => g.id === modal.goal?.id) || modal.goal;
         return (
           <Modal title="Goal Detail" subtitle={`${liveGoal.orgLevel} · ${liveGoal.type} · ${liveGoal.cascade === "core" ? "Core" : "Flank"}`} onClose={closeModal} wide>
             <GoalDetail goal={liveGoal} allGoals={data.goals} members={members} currentUser={currentUser}
