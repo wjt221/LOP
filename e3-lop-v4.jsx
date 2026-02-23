@@ -285,6 +285,12 @@ async function saveData(d) {
   try { await window.storage.set("e3_lop_v4", JSON.stringify(d)); } catch {}
 }
 
+// Monotonic counter used for ALL ID generation — guarantees uniqueness even
+// when multiple items are created in the same millisecond (e.g. cascading
+// child goals, rapid comments, invite + goal in the same tick).
+let _idSeq = Date.now();
+const genId = (prefix = "g") => `${prefix}${_idSeq++}`;
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function getGoalStatus(goal) {
   const months = MONTHS.map(m => goal.scorecard?.[m]).filter(Boolean);
@@ -671,7 +677,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
               Strategies → Cascade Down
             </div>
             <span className="text-xs ml-auto" style={{ color: E3.muted }}>
-              {goal.strategies.filter(s => s.childGoalId).length} of {goal.strategies.length} linked to child goals
+              {goal.strategies.filter(s => (typeof s === "string" ? null : s.childGoalId)).length} of {goal.strategies.length} linked to child goals
             </span>
           </div>
           <div className="divide-y" style={{ borderColor: E3.border }}>
@@ -827,7 +833,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
     if (!form.title.trim()) return;
     onSave({
       ...form,
-      id: `g${Date.now()}`,
+      id: genId(),
       companyId,
       parentId: null,
       comments: [],
@@ -2135,7 +2141,7 @@ function InviteForm({ onSave, onClose }) {
       <div className="flex gap-3 pt-2">
         <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-black border hover:bg-gray-50"
           style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
-        <button onClick={() => email && onSave(email, role)}
+        <button onClick={() => email.trim() && onSave(email.trim(), role)}
           className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white"
           style={{ backgroundColor: E3.navy }}>
           <Mail size={13} /> Send Invite
@@ -2171,11 +2177,6 @@ export default function E3LevelOrderPlanning() {
     const emptyScorecard = Object.fromEntries(MONTHS.map(m => [m, null]));
 
     setData(d => {
-      // Monotonic counter ensures unique IDs even when multiple goals are
-      // created in the same millisecond (e.g. parent + several child goals).
-      let _idSeq = Date.now();
-      const genId = () => `g${_idSeq++}`;
-
       const goals = [...d.goals];
       let savedGoalId;
 
@@ -2285,7 +2286,7 @@ export default function E3LevelOrderPlanning() {
     setData(d => ({
       ...d,
       goals: d.goals.map(g => g.id === goalId
-        ? { ...g, comments: [...(g.comments || []), { id: `cm${Date.now()}`, userId: currentUser?.id, text, date: new Date().toISOString().slice(0,10) }] }
+        ? { ...g, comments: [...(g.comments || []), { id: genId("cm"), userId: currentUser?.id, text, date: new Date().toISOString().slice(0,10) }] }
         : g)
     }));
   };
@@ -2303,7 +2304,7 @@ export default function E3LevelOrderPlanning() {
     setData(d => ({
       ...d,
       companies: d.companies.map(c => c.id === activeCompanyId
-        ? { ...c, members: [...c.members, { id: `u${Date.now()}`, name: email.split("@")[0], email, role }] }
+        ? { ...c, members: [...c.members, { id: genId("u"), name: email.split("@")[0] || email, email, role }] }
         : c)
     }));
     closeModal();
