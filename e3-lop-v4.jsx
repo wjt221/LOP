@@ -284,6 +284,12 @@ async function loadData() {
 async function saveData(d) {
   try { await window.storage.set("e3_lop_v4", JSON.stringify(d)); } catch {}
 }
+async function loadUser() {
+  try { const r = await window.storage.get("e3_lop_user"); return r ? JSON.parse(r.value) : null; } catch { return null; }
+}
+async function saveUser(u) {
+  try { await window.storage.set("e3_lop_user", JSON.stringify(u)); } catch {}
+}
 
 // Monotonic counter used for ALL ID generation — guarantees uniqueness even
 // when multiple items are created in the same millisecond (e.g. cascading
@@ -2618,6 +2624,98 @@ function ImportGoalsModal({ members, onImport, onClose }) {
   );
 }
 
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const inputCls = "w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 transition-all";
+  const is = { borderColor: E3.border, color: E3.navy };
+
+  const handleSubmit = () => {
+    if (!name.trim()) return;
+    onLogin({ id: "u1", name: name.trim(), email: email.trim(), role: "superadmin" });
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: E3.navy }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8" style={{ boxShadow: "0 40px 80px rgba(0,0,0,0.4)" }}>
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ backgroundColor: E3.navy }}>
+            <span className="font-black text-white text-xl">E3</span>
+          </div>
+          <h1 className="font-black text-2xl mb-1" style={{ color: E3.navy, letterSpacing: "-0.03em" }}>Strategy Cascade</h1>
+          <div className="text-sm" style={{ color: E3.muted }}>Level Order Planning — sign in to continue</div>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Your Name *</label>
+            <input className={inputCls} style={is} value={name} autoFocus
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSubmit()}
+              placeholder="e.g. William Tenenbaum" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Email</label>
+            <input type="email" className={inputCls} style={is} value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSubmit()}
+              placeholder="you@company.com" />
+          </div>
+          <button onClick={handleSubmit} disabled={!name.trim()}
+            className="w-full py-3 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-40"
+            style={{ backgroundColor: E3.navy }}>
+            Get Started →
+          </button>
+        </div>
+        <div className="mt-6 text-center text-xs" style={{ color: E3.muted }}>
+          You'll be set up as Super Admin with access to all client workspaces.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PROFILE FORM ─────────────────────────────────────────────────────────────
+function ProfileForm({ user, onSave, onClose }) {
+  const [form, setForm] = useState({ name: user.name || "", email: user.email || "" });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const inputCls = "w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all";
+  const is = { borderColor: E3.border, color: E3.navy };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-center pb-2">
+        <Avatar name={form.name || user.name} size={14} />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Name *</label>
+        <input className={inputCls} style={is} value={form.name} autoFocus
+          onChange={e => set("name", e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Email</label>
+        <input type="email" className={inputCls} style={is} value={form.email}
+          onChange={e => set("email", e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Role</label>
+        <div className="px-3 py-2.5 rounded-lg border text-sm font-bold capitalize"
+          style={{ borderColor: E3.border, color: E3.muted, backgroundColor: E3.silver }}>
+          {user.role}
+        </div>
+      </div>
+      <div className="flex gap-3 pt-1">
+        <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-gray-50 transition-colors"
+          style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
+        <button onClick={() => form.name.trim() && onSave(form)} disabled={!form.name.trim()}
+          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-black text-white transition-colors disabled:opacity-40"
+          style={{ backgroundColor: E3.navy }}>Save Profile</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── ADD COMPANY FORM ─────────────────────────────────────────────────────────
 function AddCompanyForm({ onSave, onClose }) {
   const [form, setForm] = useState({ name: "", industry: "", logo: "" });
@@ -2674,17 +2772,50 @@ export default function E3LevelOrderPlanning() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [modal, setModal] = useState(null);
   const [hoveredCompanyId, setHoveredCompanyId] = useState(null);
+  const [user, setUser] = useState(null);
+  const [userLoaded, setUserLoaded] = useState(false);
 
+  useEffect(() => { loadUser().then(u => { setUser(u); setUserLoaded(true); }); }, []);
   useEffect(() => { loadData().then(d => { setData(d || SEED); setLoading(false); }); }, []);
   useEffect(() => { if (data) saveData(data); }, [data]);
 
   const company = data?.companies.find(c => c.id === activeCompanyId) || data?.companies?.[0];
   const members = company?.members || [];
-  const currentUser = data?.currentUser;
+  // user profile (from separate storage) always takes precedence over embedded currentUser
+  const currentUser = user ? { ...(data?.currentUser || {}), ...user } : data?.currentUser;
   const isSuperAdmin = currentUser?.role === "superadmin";
   const userRole = members.find(m => m.id === currentUser?.id)?.role || currentUser?.role;
   const canEdit = ["admin","superadmin","editor"].includes(userRole);
   const closeModal = () => setModal(null);
+
+  const handleLogin = (newUser) => {
+    setUser(newUser);
+    saveUser(newUser);
+    // Patch name/email into every company where this user is a member
+    setData(d => d ? {
+      ...d,
+      currentUser: newUser,
+      companies: d.companies.map(c => ({
+        ...c,
+        members: c.members.map(m => m.id === newUser.id ? { ...m, name: newUser.name, email: newUser.email } : m),
+      })),
+    } : null);
+  };
+
+  const handleSaveProfile = (form) => {
+    const updated = { ...user, name: form.name.trim(), email: form.email.trim() };
+    setUser(updated);
+    saveUser(updated);
+    setData(d => ({
+      ...d,
+      currentUser: updated,
+      companies: d.companies.map(c => ({
+        ...c,
+        members: c.members.map(m => m.id === updated.id ? { ...m, name: updated.name, email: updated.email } : m),
+      })),
+    }));
+    closeModal();
+  };
 
   const handleImportGoals = (rows) => {
     const emptyScorecard = Object.fromEntries(MONTHS.map(m => [m, null]));
@@ -2920,15 +3051,18 @@ export default function E3LevelOrderPlanning() {
     closeModal();
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: E3.silver }}>
+  const isLoading = !userLoaded || loading;
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: E3.navy }}>
       <div className="text-center">
         <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-3"
-          style={{ borderColor: E3.navy, borderTopColor: "transparent" }} />
-        <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: E3.muted }}>Loading...</div>
+          style={{ borderColor: "white", borderTopColor: "transparent" }} />
+        <div className="text-xs font-semibold uppercase tracking-widest text-white opacity-30">Loading...</div>
       </div>
     </div>
   );
+
+  if (!user) return <LoginScreen onLogin={handleLogin} />;
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: Home },
@@ -3012,15 +3146,16 @@ export default function E3LevelOrderPlanning() {
         )}
 
         <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-          <div className="flex items-center gap-2.5 px-2">
+          <button onClick={() => setModal({ type: "profile" })}
+            className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white hover:bg-opacity-5 transition-colors text-left">
             <Avatar name={currentUser?.name} size={7} />
             {sidebarOpen && (
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-xs font-black text-white truncate">{currentUser?.name}</div>
                 <div className="text-xs text-white opacity-30 capitalize">{currentUser?.role}</div>
               </div>
             )}
-          </div>
+          </button>
         </div>
       </aside>
 
@@ -3131,6 +3266,11 @@ export default function E3LevelOrderPlanning() {
           confirmLabel="Remove Client"
           onConfirm={() => handleRemoveCompany(modal.company.id)}
           onCancel={closeModal} />
+      )}
+      {modal?.type === "profile" && (
+        <Modal title="My Profile" subtitle={`Signed in as ${currentUser?.role}`} onClose={closeModal}>
+          <ProfileForm user={currentUser} onSave={handleSaveProfile} onClose={closeModal} />
+        </Modal>
       )}
     </div>
   );
