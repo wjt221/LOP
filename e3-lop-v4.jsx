@@ -8,7 +8,7 @@ import {
   AlertTriangle, Plus, X, Edit2, MessageSquare,
   BarChart2, FileText, Menu, Layers, Home,
   Users, Mail, Shield, Eye, PenTool, ArrowRight,
-  TrendingUp, Trash2, Search, Printer
+  TrendingUp, Trash2, Search, Printer, Upload
 } from "lucide-react";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
@@ -290,6 +290,94 @@ async function saveData(d) {
 // child goals, rapid comments, invite + goal in the same tick).
 let _idSeq = Date.now();
 const genId = (prefix = "g") => `${prefix}${_idSeq++}`;
+
+// ─── CSV IMPORT HELPERS ───────────────────────────────────────────────────────
+function parseCSVLine(line) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (c === ',' && !inQuotes) {
+      result.push(current); current = "";
+    } else {
+      current += c;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+function parseGoalsCSV(text, members) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
+
+  const col = (row, ...names) => {
+    for (const n of names) {
+      const idx = headers.indexOf(n);
+      if (idx !== -1 && (row[idx] || "").trim()) return row[idx].trim();
+    }
+    return "";
+  };
+
+  const matchMember = (nameOrEmail) => {
+    if (!nameOrEmail) return members[0]?.id || "";
+    const q = nameOrEmail.toLowerCase();
+    return members.find(m => m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q))?.id
+      || members[0]?.id || "";
+  };
+
+  const VALID_LEVELS = ["L1", "L2", "L3"];
+  const VALID_CASCADES = ["core", "flank"];
+  const VALID_TYPES = ["Goal", "Strategy", "Tactic"];
+
+  return lines.slice(1).map(line => {
+    const row = parseCSVLine(line);
+    if (row.every(v => !v.trim())) return null;
+    const rawLevel = col(row, "orglevel", "level", "lvl").toUpperCase();
+    const orgLevel = VALID_LEVELS.includes(rawLevel) ? rawLevel : "L1";
+    const typeForLevel = { L1: "Goal", L2: "Strategy", L3: "Tactic" };
+    const rawType = col(row, "type");
+    const type = VALID_TYPES.includes(rawType) ? rawType : typeForLevel[orgLevel];
+    const rawCascade = col(row, "cascade").toLowerCase();
+    const cascade = VALID_CASCADES.includes(rawCascade) ? rawCascade : "core";
+    const rawStrategies = col(row, "strategiessemicolonseparated", "strategies", "strategiessemicolonsep", "strategy");
+    const strategies = rawStrategies
+      ? rawStrategies.split(";").map(s => s.trim()).filter(Boolean).map(text => ({
+          text, ownerId: matchMember(""), childGoalId: null
+        }))
+      : [];
+    return {
+      title: col(row, "title", "goalname", "name", "goal"),
+      orgLevel,
+      type,
+      cascade,
+      owner: matchMember(col(row, "owner", "ownername", "assignedto", "assignee")),
+      dueDate: col(row, "duedate", "due", "date"),
+      metric: col(row, "metric", "measure", "kpi"),
+      description: col(row, "description", "desc", "notes"),
+      strategies,
+    };
+  }).filter(r => r && r.title);
+}
+
+const CSV_TEMPLATE_HEADERS = "Title,Org Level,Type,Cascade,Owner,Due Date,Metric,Description,Strategies (semicolon-separated)";
+const CSV_TEMPLATE_EXAMPLE = `"Grow Revenue to $10M",L1,Goal,core,"Jane Smith",2025-12-31,"Revenue ($M)","Achieve top-line growth","Expand enterprise sales;Launch new product line"
+"Expand Enterprise Sales",L2,Strategy,core,"Bob Jones",2025-12-31,"# Enterprise deals","Win new enterprise accounts",""
+"Launch New Product Line",L2,Strategy,flank,"Sarah Kim",2025-12-31,"# Products launched","New product GTM",""`;
+
+function downloadCSVTemplate() {
+  const csv = [CSV_TEMPLATE_HEADERS, CSV_TEMPLATE_EXAMPLE].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "goals-template.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function getGoalStatus(goal) {
@@ -950,7 +1038,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
   );
 }
 
-function DashboardView({ goals, company, members, currentUser, onGoalClick, onAddGoal, onOpenGoalModal }) {
+function DashboardView({ goals, company, members, currentUser, onGoalClick, onAddGoal, onOpenGoalModal, onOpenImportModal }) {
   const cg = goals.filter(g => g.companyId === company.id);
   const [selectedMemberId, setSelectedMemberId] = useState(
     members.find(m => m.id === currentUser?.id)?.id || members[0]?.id
@@ -984,13 +1072,20 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
         </div>
         <div className="font-black text-xl mb-2" style={{ color: E3.navy }}>{company.name} has no goals yet</div>
         <div className="text-sm mb-6 max-w-sm" style={{ color: E3.muted }}>
-          Start by adding your first L1 leadership goal. Each goal can cascade strategies down to L2 and L3 teams.
+          Add your first L1 leadership goal manually, or import them all at once from a CSV or Excel file.
         </div>
-        <button onClick={onOpenGoalModal}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black text-white"
-          style={{ backgroundColor: E3.navy }}>
-          <Plus size={15} /> Add First Goal
-        </button>
+        <div className="flex gap-3">
+          <button onClick={onOpenGoalModal}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black text-white"
+            style={{ backgroundColor: E3.navy }}>
+            <Plus size={15} /> Add First Goal
+          </button>
+          <button onClick={onOpenImportModal}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black border"
+            style={{ borderColor: E3.border, color: E3.navy }}>
+            <Upload size={15} /> Import from CSV
+          </button>
+        </div>
       </div>
     );
   }
@@ -2185,6 +2280,130 @@ function InviteForm({ onSave, onClose }) {
   );
 }
 
+// ─── IMPORT GOALS MODAL ───────────────────────────────────────────────────────
+function ImportGoalsModal({ members, onImport, onClose }) {
+  const [parsed, setParsed] = useState(null);
+  const [error, setError] = useState("");
+  const [dragging, setDragging] = useState(false);
+
+  const processFile = (file) => {
+    if (!file) return;
+    if (!file.name.match(/\.(csv|txt)$/i)) {
+      setError("Please upload a .csv file. (Excel: File → Save As → CSV)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rows = parseGoalsCSV(e.target.result, members);
+      if (!rows.length) {
+        setError("No valid rows found. Make sure the file has a header row and at least one data row with a Title.");
+      } else {
+        setError("");
+        setParsed(rows);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const onFileChange = (e) => processFile(e.target.files[0]);
+  const onDrop = (e) => {
+    e.preventDefault(); setDragging(false);
+    processFile(e.dataTransfer.files[0]);
+  };
+
+  const levelColor = { L1: E3.navy, L2: "#2a5cb8", L3: E3.accent };
+
+  return (
+    <div className="space-y-4">
+      {/* Template download */}
+      <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: E3.accentLight }}>
+        <div>
+          <div className="text-sm font-black" style={{ color: E3.navy }}>Need a template?</div>
+          <div className="text-xs" style={{ color: E3.muted }}>Download, fill in Excel/Sheets, save as CSV, then upload below.</div>
+        </div>
+        <button onClick={downloadCSVTemplate}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black text-white flex-shrink-0"
+          style={{ backgroundColor: E3.navy }}>
+          <FileText size={12} /> Download Template
+        </button>
+      </div>
+
+      {/* Drop zone */}
+      {!parsed && (
+        <label
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          className={`flex flex-col items-center justify-center gap-3 p-10 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${dragging ? "border-blue-400 bg-blue-50" : ""}`}
+          style={{ borderColor: dragging ? E3.accent : E3.border }}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: E3.accentLight }}>
+            <Upload size={22} style={{ color: E3.accent }} />
+          </div>
+          <div className="text-center">
+            <div className="font-black text-sm" style={{ color: E3.navy }}>Drop your CSV here</div>
+            <div className="text-xs mt-0.5" style={{ color: E3.muted }}>or click to browse</div>
+          </div>
+          <input type="file" accept=".csv,.txt" className="hidden" onChange={onFileChange} />
+        </label>
+      )}
+
+      {error && (
+        <div className="text-sm p-3 rounded-lg" style={{ backgroundColor: "#fef2f2", color: "#b91c1c" }}>{error}</div>
+      )}
+
+      {/* Preview table */}
+      {parsed && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-black" style={{ color: E3.navy }}>{parsed.length} goal{parsed.length !== 1 ? "s" : ""} ready to import</div>
+            <button onClick={() => { setParsed(null); setError(""); }} className="text-xs font-bold" style={{ color: E3.muted }}>← Upload different file</button>
+          </div>
+          <div className="border rounded-xl overflow-hidden" style={{ borderColor: E3.border }}>
+            <div className="overflow-y-auto" style={{ maxHeight: 280 }}>
+              <table className="w-full text-xs">
+                <thead className="sticky top-0" style={{ backgroundColor: E3.silver }}>
+                  <tr>
+                    {["Title", "Level", "Cascade", "Owner", "Metric", "Strategies"].map(h => (
+                      <th key={h} className="px-3 py-2 text-left font-black" style={{ color: E3.navy }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsed.map((row, i) => {
+                    const ownerName = members.find(m => m.id === row.owner)?.name || "—";
+                    return (
+                      <tr key={i} className={i % 2 === 0 ? "bg-white" : ""} style={{ backgroundColor: i % 2 === 1 ? E3.silver : undefined }}>
+                        <td className="px-3 py-2 font-bold max-w-xs truncate" style={{ color: E3.navy }}>{row.title}</td>
+                        <td className="px-3 py-2">
+                          <span className="px-1.5 py-0.5 rounded text-white font-black" style={{ backgroundColor: levelColor[row.orgLevel] || E3.navy, fontSize: 10 }}>{row.orgLevel}</span>
+                        </td>
+                        <td className="px-3 py-2 capitalize" style={{ color: E3.muted }}>{row.cascade}</td>
+                        <td className="px-3 py-2" style={{ color: E3.muted }}>{ownerName}</td>
+                        <td className="px-3 py-2 max-w-xs truncate" style={{ color: E3.muted }}>{row.metric || "—"}</td>
+                        <td className="px-3 py-2" style={{ color: E3.muted }}>{row.strategies.length > 0 ? `${row.strategies.length} strategies` : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-1">
+        <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-gray-50 transition-colors"
+          style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
+        <button onClick={() => parsed && onImport(parsed)} disabled={!parsed}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-black text-white transition-colors disabled:opacity-40"
+          style={{ backgroundColor: E3.navy }}>
+          <Upload size={13} /> Import {parsed ? `${parsed.length} Goal${parsed.length !== 1 ? "s" : ""}` : "Goals"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── ADD COMPANY FORM ─────────────────────────────────────────────────────────
 function AddCompanyForm({ onSave, onClose }) {
   const [form, setForm] = useState({ name: "", industry: "", logo: "" });
@@ -2251,6 +2470,27 @@ export default function E3LevelOrderPlanning() {
   const userRole = members.find(m => m.id === currentUser?.id)?.role || currentUser?.role;
   const canEdit = ["admin","superadmin","editor"].includes(userRole);
   const closeModal = () => setModal(null);
+
+  const handleImportGoals = (rows) => {
+    const emptyScorecard = Object.fromEntries(MONTHS.map(m => [m, null]));
+    const newGoals = rows.map(row => ({
+      id: genId(),
+      companyId: activeCompanyId,
+      orgLevel: row.orgLevel,
+      type: row.type,
+      cascade: row.cascade,
+      title: row.title,
+      metric: row.metric,
+      description: row.description,
+      owner: row.owner,
+      dueDate: row.dueDate,
+      strategies: row.strategies,
+      scorecard: { ...emptyScorecard },
+      comments: [],
+    }));
+    setData(d => ({ ...d, goals: [...d.goals, ...newGoals] }));
+    closeModal();
+  };
 
   const handleAddCompany = ({ name, industry, logo }) => {
     const id = genId();
@@ -2519,6 +2759,13 @@ export default function E3LevelOrderPlanning() {
               <div className="text-xs font-semibold uppercase tracking-widest px-2.5 py-1 rounded-full"
                 style={{ backgroundColor: E3.accentLight, color: E3.accent }}>Super Admin</div>
             )}
+            {canEdit && (
+              <button onClick={() => setModal({ type: "import-goals" })}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black border transition-colors hover:bg-gray-50"
+                style={{ borderColor: E3.border, color: E3.navy }}>
+                <Upload size={13} /> Import CSV
+              </button>
+            )}
             {canEdit && (activeView === "cascade" || activeView === "scorecard") && (
               <button onClick={() => setModal({ type: "add", parentId: null, orgLevel: "L1" })}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white"
@@ -2530,7 +2777,7 @@ export default function E3LevelOrderPlanning() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
-          {activeView === "dashboard" && <DashboardView goals={data.goals} company={company} members={members} currentUser={currentUser} onGoalClick={g => setModal({ type: "detail", goal: g })} onAddGoal={handleAddGoalDirect} onOpenGoalModal={() => setModal({ type: "add", parentId: null, orgLevel: "L1" })} />}
+          {activeView === "dashboard" && <DashboardView goals={data.goals} company={company} members={members} currentUser={currentUser} onGoalClick={g => setModal({ type: "detail", goal: g })} onAddGoal={handleAddGoalDirect} onOpenGoalModal={() => setModal({ type: "add", parentId: null, orgLevel: "L1" })} onOpenImportModal={() => setModal({ type: "import-goals" })} />}
           {activeView === "cascade" && <CascadeView goals={data.goals} company={company} members={members} onGoalClick={g => setModal({ type: "detail", goal: g })} onAdd={(parentId, orgLevel) => setModal({ type: "add", parentId, orgLevel })} canEdit={canEdit} />}
           {activeView === "scorecard" && <ScorecardView goals={data.goals} company={company} members={members} onGoalClick={g => setModal({ type: "detail", goal: g })} onUpdateScorecard={handleUpdateScorecard} />}
           {activeView === "charts" && <ChartsView goals={data.goals} company={company} />}
@@ -2566,6 +2813,11 @@ export default function E3LevelOrderPlanning() {
       {modal?.type === "add-company" && (
         <Modal title="Add New Client" subtitle="Create a new client workspace" onClose={closeModal}>
           <AddCompanyForm onSave={handleAddCompany} onClose={closeModal} />
+        </Modal>
+      )}
+      {modal?.type === "import-goals" && (
+        <Modal title="Import Goals from CSV" subtitle={`Importing into: ${company?.name}`} onClose={closeModal} wide>
+          <ImportGoalsModal members={members} onImport={handleImportGoals} onClose={closeModal} />
         </Modal>
       )}
     </div>
