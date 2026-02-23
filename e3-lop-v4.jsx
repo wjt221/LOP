@@ -1967,7 +1967,7 @@ function MeetingView({ goals, company, members }) {
     win.document.write(`
       <html><head><title>Weekly Leadership Review — ${company.name}</title>
       <style>
-        body { font-family: system-ui, sans-serif; color: #1a2d5a; padding: 32px; font-size: 13px; }
+        body { font-family: 'Gilroy', system-ui, sans-serif; color: #1a2d5a; padding: 32px; font-size: 13px; }
         h1 { font-size: 22px; margin-bottom: 4px; }
         h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 28px; color: #6b7a99; border-bottom: 1px solid #dde3f0; padding-bottom: 6px; }
         .goal { padding: 10px 0; border-bottom: 1px solid #f0f2f7; }
@@ -3192,7 +3192,7 @@ export default function E3LevelOrderPlanning() {
   ];
 
   return (
-    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: E3.silver, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: E3.silver, fontFamily: "'Gilroy', system-ui, sans-serif" }}>
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? "w-60" : "w-16"} h-screen transition-all duration-300 flex flex-col flex-shrink-0 z-20`}
         style={{ backgroundColor: E3.navy }}>
