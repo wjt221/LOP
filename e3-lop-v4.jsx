@@ -284,6 +284,30 @@ async function loadData() {
 async function saveData(d) {
   try { await window.storage.set("e3_lop_v4", JSON.stringify(d)); } catch {}
 }
+async function loadUser() {
+  try { const r = await window.storage.get("e3_lop_user"); return r ? JSON.parse(r.value) : null; } catch { return null; }
+}
+async function saveUser(u) {
+  try { await window.storage.set("e3_lop_user", JSON.stringify(u)); } catch {}
+}
+
+// ─── PASSWORD / SESSION HELPERS ───────────────────────────────────────────────
+function generateSalt() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function hashPassword(password, salt) {
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(salt + password)
+  );
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function hasValidSession() {
+  return sessionStorage.getItem("e3_session") === "1";
+}
+function startSession() { sessionStorage.setItem("e3_session", "1"); }
+function clearSession() { sessionStorage.removeItem("e3_session"); }
 
 // Monotonic counter used for ALL ID generation — guarantees uniqueness even
 // when multiple items are created in the same millisecond (e.g. cascading
@@ -2618,6 +2642,272 @@ function ImportGoalsModal({ members, onImport, onClose }) {
   );
 }
 
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
+// mode: "setup"  — first run, no stored user
+// mode: "setpw"  — profile exists but no password set yet
+// mode: "signin" — profile + password exist, session expired
+function LoginScreen({ storedUser, onSetup, onSignIn, onReset }) {
+  const mode = !storedUser ? "setup" : !storedUser.passwordHash ? "setpw" : "signin";
+  const [name,    setName]    = useState(storedUser?.name  || "");
+  const [email,   setEmail]   = useState(storedUser?.email || "");
+  const [pw,      setPw]      = useState("");
+  const [pw2,     setPw2]     = useState("");
+  const [err,     setErr]     = useState("");
+  const [busy,    setBusy]    = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const inp  = "w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 transition-all";
+  const is   = { borderColor: E3.border, color: E3.navy };
+  const label = (t) => (
+    <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>{t}</label>
+  );
+
+  const handleSubmit = async () => {
+    setErr(""); setBusy(true);
+    try {
+      if (mode === "signin") {
+        const hash = await hashPassword(pw, storedUser.salt);
+        if (hash !== storedUser.passwordHash) { setErr("Incorrect password."); return; }
+        onSignIn();
+      } else {
+        if (!name.trim())        { setErr("Name is required."); return; }
+        if (pw.length < 8)       { setErr("Password must be at least 8 characters."); return; }
+        if (pw !== pw2)          { setErr("Passwords don't match."); return; }
+        const salt = generateSalt();
+        const passwordHash = await hashPassword(pw, salt);
+        onSetup({ id: storedUser?.id || "u1", name: name.trim(), email: email.trim(), role: "superadmin", passwordHash, salt });
+      }
+    } finally { setBusy(false); }
+  };
+
+  const canSubmit = mode === "signin" ? !!pw : (name.trim() && pw.length >= 8 && pw === pw2);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: E3.navy }}>
+      <div className="bg-white rounded-3xl w-full max-w-sm p-8" style={{ boxShadow: "0 40px 80px rgba(0,0,0,0.45)" }}>
+
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: E3.navy }}>
+            <span className="font-black text-white text-xl">E3</span>
+          </div>
+          <h1 className="font-black text-2xl mb-1" style={{ color: E3.navy, letterSpacing: "-0.03em" }}>Strategy Cascade</h1>
+          <div className="text-sm" style={{ color: E3.muted }}>
+            {mode === "signin" ? `Welcome back, ${storedUser.name}` : "Level Order Planning"}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {/* Sign-in: just show avatar + password */}
+          {mode === "signin" && (
+            <>
+              <div className="flex justify-center pb-1"><Avatar name={storedUser.name} size={14} /></div>
+              <div>
+                {label("Password")}
+                <input type="password" className={inp} style={is} value={pw} autoFocus
+                  onChange={e => setPw(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && !busy && canSubmit && handleSubmit()}
+                  placeholder="Enter your password" />
+              </div>
+            </>
+          )}
+
+          {/* Setup / setpw: name + email (setup only) + passwords */}
+          {mode !== "signin" && (
+            <>
+              {mode === "setup" && (
+                <>
+                  <div>
+                    {label("Your Name *")}
+                    <input className={inp} style={is} value={name} autoFocus
+                      onChange={e => setName(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && !busy && canSubmit && handleSubmit()}
+                      placeholder="e.g. William Tenenbaum" />
+                  </div>
+                  <div>
+                    {label("Email")}
+                    <input type="email" className={inp} style={is} value={email}
+                      onChange={e => setEmail(e.target.value)} placeholder="you@company.com" />
+                  </div>
+                </>
+              )}
+              {mode === "setpw" && (
+                <div className="p-3 rounded-xl text-sm text-center" style={{ backgroundColor: E3.accentLight, color: E3.navy }}>
+                  Set a password for <strong>{storedUser.name}</strong> to protect your data.
+                </div>
+              )}
+              <div>
+                {label("Password (min 8 characters) *")}
+                <input type="password" className={inp} style={is} value={pw}
+                  autoFocus={mode === "setpw"}
+                  onChange={e => setPw(e.target.value)} placeholder="Create a strong password" />
+              </div>
+              <div>
+                {label("Confirm Password *")}
+                <input type="password" className={inp} style={is} value={pw2}
+                  onChange={e => setPw2(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && !busy && canSubmit && handleSubmit()}
+                  placeholder="Repeat your password" />
+                {pw2 && pw !== pw2 && (
+                  <div className="text-xs mt-1" style={{ color: "#dc2626" }}>Passwords don't match</div>
+                )}
+              </div>
+            </>
+          )}
+
+          {err && <div className="text-sm font-bold text-center py-2 rounded-lg" style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}>{err}</div>}
+
+          <button onClick={handleSubmit} disabled={!canSubmit || busy}
+            className="w-full py-3 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-40"
+            style={{ backgroundColor: E3.navy }}>
+            {busy ? "Please wait…" : mode === "signin" ? "Sign In →" : mode === "setpw" ? "Set Password →" : "Get Started →"}
+          </button>
+
+          {/* Forgot password */}
+          {mode === "signin" && (
+            <button onClick={() => setConfirmReset(true)}
+              className="w-full text-xs text-center py-1 transition-opacity hover:opacity-80"
+              style={{ color: E3.muted }}>
+              Forgot password? Reset all data
+            </button>
+          )}
+
+          {mode === "setup" && (
+            <div className="text-center text-xs" style={{ color: E3.muted }}>
+              You'll be set up as Super Admin with access to all client workspaces.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {confirmReset && (
+        <ConfirmModal
+          title="Reset All Data?"
+          message="This permanently deletes your profile, all companies, and all goals. You'll start fresh. This cannot be undone."
+          confirmLabel="Reset Everything"
+          onConfirm={onReset}
+          onCancel={() => setConfirmReset(false)} />
+      )}
+    </div>
+  );
+}
+
+// ─── PROFILE FORM ─────────────────────────────────────────────────────────────
+function ProfileForm({ user, onSave, onChangePassword, onSignOut, onClose }) {
+  const [form, setForm]   = useState({ name: user.name || "", email: user.email || "" });
+  const [pwSection, setPwSection] = useState(false);
+  const [curPw,  setCurPw]  = useState("");
+  const [newPw,  setNewPw]  = useState("");
+  const [newPw2, setNewPw2] = useState("");
+  const [pwErr,  setPwErr]  = useState("");
+  const [pwBusy, setPwBusy] = useState("");
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const inp = "w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all";
+  const is  = { borderColor: E3.border, color: E3.navy };
+  const lbl = (t) => <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>{t}</label>;
+
+  const handleChangePw = async () => {
+    setPwErr(""); setPwBusy(true);
+    try {
+      if (user.passwordHash) {
+        const curHash = await hashPassword(curPw, user.salt);
+        if (curHash !== user.passwordHash) { setPwErr("Current password is incorrect."); return; }
+      }
+      if (newPw.length < 8) { setPwErr("New password must be at least 8 characters."); return; }
+      if (newPw !== newPw2) { setPwErr("New passwords don't match."); return; }
+      const salt = generateSalt();
+      const passwordHash = await hashPassword(newPw, salt);
+      onChangePassword({ passwordHash, salt });
+    } finally { setPwBusy(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-center pb-1"><Avatar name={form.name || user.name} size={14} /></div>
+
+      {/* Profile fields */}
+      <div>
+        {lbl("Name *")}
+        <input className={inp} style={is} value={form.name} autoFocus onChange={e => set("name", e.target.value)} />
+      </div>
+      <div>
+        {lbl("Email")}
+        <input type="email" className={inp} style={is} value={form.email} onChange={e => set("email", e.target.value)} />
+      </div>
+      <div>
+        {lbl("Role")}
+        <div className="px-3 py-2.5 rounded-lg border text-sm font-bold capitalize"
+          style={{ borderColor: E3.border, color: E3.muted, backgroundColor: E3.silver }}>{user.role}</div>
+      </div>
+
+      <div className="flex gap-3 pt-1">
+        <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-gray-50 transition-colors"
+          style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
+        <button onClick={() => form.name.trim() && onSave(form)} disabled={!form.name.trim()}
+          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-black text-white transition-colors disabled:opacity-40"
+          style={{ backgroundColor: E3.navy }}>Save Profile</button>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t pt-3" style={{ borderColor: E3.border }}>
+        {!pwSection ? (
+          <div className="flex gap-3">
+            <button onClick={() => setPwSection(true)}
+              className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-gray-50 transition-colors text-center"
+              style={{ borderColor: E3.border, color: E3.navy }}>
+              {user.passwordHash ? "Change Password" : "Set Password"}
+            </button>
+            <button onClick={onSignOut}
+              className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-red-50 transition-colors text-center"
+              style={{ borderColor: "#fca5a5", color: "#dc2626" }}>
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="text-xs font-black uppercase tracking-wider" style={{ color: E3.navy }}>
+              {user.passwordHash ? "Change Password" : "Set Password"}
+            </div>
+            {user.passwordHash && (
+              <div>
+                {lbl("Current Password")}
+                <input type="password" className={inp} style={is} value={curPw}
+                  onChange={e => setCurPw(e.target.value)} autoFocus placeholder="Your current password" />
+              </div>
+            )}
+            <div>
+              {lbl("New Password (min 8 characters)")}
+              <input type="password" className={inp} style={is} value={newPw}
+                autoFocus={!user.passwordHash}
+                onChange={e => setNewPw(e.target.value)} placeholder="New password" />
+            </div>
+            <div>
+              {lbl("Confirm New Password")}
+              <input type="password" className={inp} style={is} value={newPw2}
+                onChange={e => setNewPw2(e.target.value)} placeholder="Repeat new password" />
+              {newPw2 && newPw !== newPw2 && (
+                <div className="text-xs mt-1" style={{ color: "#dc2626" }}>Passwords don't match</div>
+              )}
+            </div>
+            {pwErr && <div className="text-sm font-bold py-2 px-3 rounded-lg" style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}>{pwErr}</div>}
+            <div className="flex gap-3">
+              <button onClick={() => { setPwSection(false); setCurPw(""); setNewPw(""); setNewPw2(""); setPwErr(""); }}
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-gray-50"
+                style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
+              <button onClick={handleChangePw}
+                disabled={pwBusy || newPw.length < 8 || newPw !== newPw2 || (user.passwordHash && !curPw)}
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-black text-white disabled:opacity-40"
+                style={{ backgroundColor: E3.navy }}>
+                {pwBusy ? "Saving…" : "Save Password"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── ADD COMPANY FORM ─────────────────────────────────────────────────────────
 function AddCompanyForm({ onSave, onClose }) {
   const [form, setForm] = useState({ name: "", industry: "", logo: "" });
@@ -2674,17 +2964,83 @@ export default function E3LevelOrderPlanning() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [modal, setModal] = useState(null);
   const [hoveredCompanyId, setHoveredCompanyId] = useState(null);
+  const [user, setUser] = useState(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
 
+  useEffect(() => {
+    loadUser().then(u => {
+      setUser(u);
+      // skip password gate if session is still alive in this browser tab
+      if (u && hasValidSession()) setAuthenticated(true);
+      setUserLoaded(true);
+    });
+  }, []);
   useEffect(() => { loadData().then(d => { setData(d || SEED); setLoading(false); }); }, []);
   useEffect(() => { if (data) saveData(data); }, [data]);
 
   const company = data?.companies.find(c => c.id === activeCompanyId) || data?.companies?.[0];
   const members = company?.members || [];
-  const currentUser = data?.currentUser;
+  // Strip credentials before exposing to the rest of the app
+  const currentUser = user
+    ? { ...(data?.currentUser || {}), id: user.id, name: user.name, email: user.email, role: user.role }
+    : data?.currentUser;
   const isSuperAdmin = currentUser?.role === "superadmin";
   const userRole = members.find(m => m.id === currentUser?.id)?.role || currentUser?.role;
   const canEdit = ["admin","superadmin","editor"].includes(userRole);
   const closeModal = () => setModal(null);
+
+  // Called by LoginScreen after successful first-time setup (new user with password)
+  const handleSetup = (newUser) => {
+    setUser(newUser);
+    saveUser(newUser);
+    startSession();
+    setAuthenticated(true);
+    setData(d => d ? {
+      ...d,
+      currentUser: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
+      companies: d.companies.map(c => ({
+        ...c,
+        members: c.members.map(m => m.id === newUser.id ? { ...m, name: newUser.name, email: newUser.email } : m),
+      })),
+    } : null);
+  };
+
+  // Called by LoginScreen after password verified on returning session
+  const handleSignIn = () => { startSession(); setAuthenticated(true); };
+
+  const handleSignOut = () => { clearSession(); setAuthenticated(false); closeModal(); };
+
+  const handleReset = () => {
+    clearSession();
+    saveUser(null);
+    saveData(null);
+    setUser(null);
+    setData(null);
+    setAuthenticated(false);
+  };
+
+  const handleSaveProfile = (form) => {
+    const updated = { ...user, name: form.name.trim(), email: form.email.trim() };
+    setUser(updated);
+    saveUser(updated);
+    setData(d => ({
+      ...d,
+      currentUser: { ...d.currentUser, name: updated.name, email: updated.email },
+      companies: d.companies.map(c => ({
+        ...c,
+        members: c.members.map(m => m.id === updated.id ? { ...m, name: updated.name, email: updated.email } : m),
+      })),
+    }));
+    closeModal();
+  };
+
+  const handleChangePassword = ({ passwordHash, salt }) => {
+    const updated = { ...user, passwordHash, salt };
+    setUser(updated);
+    saveUser(updated);
+    closeModal();
+  };
 
   const handleImportGoals = (rows) => {
     const emptyScorecard = Object.fromEntries(MONTHS.map(m => [m, null]));
@@ -2920,14 +3276,23 @@ export default function E3LevelOrderPlanning() {
     closeModal();
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: E3.silver }}>
+  const isLoading = !userLoaded || loading;
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: E3.navy }}>
       <div className="text-center">
         <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-3"
-          style={{ borderColor: E3.navy, borderTopColor: "transparent" }} />
-        <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: E3.muted }}>Loading...</div>
+          style={{ borderColor: "white", borderTopColor: "transparent" }} />
+        <div className="text-xs font-semibold uppercase tracking-widest text-white opacity-30">Loading...</div>
       </div>
     </div>
+  );
+
+  if (!user || !authenticated) return (
+    <LoginScreen
+      storedUser={user}
+      onSetup={handleSetup}
+      onSignIn={handleSignIn}
+      onReset={handleReset} />
   );
 
   const navItems = [
@@ -3012,15 +3377,16 @@ export default function E3LevelOrderPlanning() {
         )}
 
         <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-          <div className="flex items-center gap-2.5 px-2">
+          <button onClick={() => setModal({ type: "profile" })}
+            className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white hover:bg-opacity-5 transition-colors text-left">
             <Avatar name={currentUser?.name} size={7} />
             {sidebarOpen && (
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-xs font-black text-white truncate">{currentUser?.name}</div>
                 <div className="text-xs text-white opacity-30 capitalize">{currentUser?.role}</div>
               </div>
             )}
-          </div>
+          </button>
         </div>
       </aside>
 
@@ -3131,6 +3497,16 @@ export default function E3LevelOrderPlanning() {
           confirmLabel="Remove Client"
           onConfirm={() => handleRemoveCompany(modal.company.id)}
           onCancel={closeModal} />
+      )}
+      {modal?.type === "profile" && (
+        <Modal title="My Profile" subtitle={`Signed in as ${currentUser?.role}`} onClose={closeModal}>
+          <ProfileForm
+            user={user}
+            onSave={handleSaveProfile}
+            onChangePassword={handleChangePassword}
+            onSignOut={handleSignOut}
+            onClose={closeModal} />
+        </Modal>
       )}
     </div>
   );
