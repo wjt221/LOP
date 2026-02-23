@@ -8,7 +8,7 @@ import {
   AlertTriangle, Plus, X, Edit2, MessageSquare,
   BarChart2, FileText, Menu, Layers, Home,
   Users, Mail, Shield, Eye, PenTool, ArrowRight,
-  TrendingUp, Trash2, Search, Printer, Upload
+  TrendingUp, Trash2, Search, Printer, Upload, Network
 } from "lucide-react";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
@@ -47,20 +47,20 @@ const SEED = {
     {
       id: "c1", name: "LatAm Holdings", industry: "Private Equity / Operations", logo: "LH",
       members: [
-        { id: "u1", name: "Carlos Mendez",   email: "carlos@latamco.com",  role: "admin",  title: "CEO" },
-        { id: "u2", name: "Sofia Reyes",     email: "sofia@latamco.com",   role: "editor", title: "Mexico Country Head" },
-        { id: "u3", name: "Miguel Santos",   email: "miguel@latamco.com",  role: "editor", title: "Dominican Republic Head" },
-        { id: "u4", name: "Valentina Cruz",  email: "val@latamco.com",     role: "editor", title: "Colombia Country Head" },
-        { id: "u5", name: "Diego Fuentes",   email: "diego@latamco.com",   role: "editor", title: "CFO" },
-        { id: "u6", name: "Lucia Vargas",    email: "lucia@latamco.com",   role: "editor", title: "VP People & Culture" },
+        { id: "u1", name: "Carlos Mendez",  email: "carlos@latamco.com", role: "admin",  title: "CEO",                    department: "Executive",          managerId: null },
+        { id: "u2", name: "Sofia Reyes",    email: "sofia@latamco.com",  role: "editor", title: "Mexico Country Head",    department: "Operations",         managerId: "u1" },
+        { id: "u3", name: "Miguel Santos",  email: "miguel@latamco.com", role: "editor", title: "DR Country Head",        department: "Operations",         managerId: "u1" },
+        { id: "u4", name: "Valentina Cruz", email: "val@latamco.com",    role: "editor", title: "Colombia Country Head",  department: "Operations",         managerId: "u1" },
+        { id: "u5", name: "Diego Fuentes",  email: "diego@latamco.com",  role: "editor", title: "CFO",                    department: "Finance",            managerId: "u1" },
+        { id: "u6", name: "Lucia Vargas",   email: "lucia@latamco.com",  role: "editor", title: "VP People & Culture",    department: "People & Culture",   managerId: "u1" },
       ]
     },
     {
       id: "c2", name: "Meridian Health", industry: "Healthcare", logo: "MH",
       members: [
-        { id: "u1", name: "Carlos Mendez",  email: "carlos@latamco.com",  role: "admin" },
-        { id: "u7", name: "Jordan Lee",     email: "jordan@meridian.com", role: "editor" },
-        { id: "u8", name: "Dana Kim",       email: "dana@meridian.com",   role: "editor" },
+        { id: "u1", name: "Carlos Mendez", email: "carlos@latamco.com",  role: "admin",  title: "Board Chair",     department: "Executive",  managerId: null },
+        { id: "u7", name: "Jordan Lee",    email: "jordan@meridian.com", role: "editor", title: "CEO",             department: "Executive",  managerId: "u1" },
+        { id: "u8", name: "Dana Kim",      email: "dana@meridian.com",   role: "editor", title: "COO",             department: "Operations", managerId: "u7" },
       ]
     }
   ],
@@ -2207,6 +2207,220 @@ function MeetingView({ goals, company, members }) {
 }
 
 // ─── TEAM VIEW ────────────────────────────────────────────────────────────────
+// ─── ORG CHART ────────────────────────────────────────────────────────────────
+function OrgMemberForm({ member, members, onSave, onDelete, onClose }) {
+  const [form, setForm] = useState({
+    name: member?.name || "",
+    email: member?.email || "",
+    title: member?.title || "",
+    department: member?.department || "",
+    managerId: member?.managerId || "",
+    role: member?.role || "editor",
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const inputCls = "w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all";
+  const is = { borderColor: E3.border, color: E3.navy };
+  const managerOptions = members.filter(m => m.id !== member?.id);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Full Name *</label>
+          <input className={inputCls} style={is} value={form.name} autoFocus
+            onChange={e => set("name", e.target.value)} placeholder="e.g. Jane Smith" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Email</label>
+          <input type="email" className={inputCls} style={is} value={form.email}
+            onChange={e => set("email", e.target.value)} placeholder="jane@company.com" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Job Title</label>
+          <input className={inputCls} style={is} value={form.title}
+            onChange={e => set("title", e.target.value)} placeholder="e.g. VP of Sales" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Department</label>
+          <input className={inputCls} style={is} value={form.department}
+            onChange={e => set("department", e.target.value)} placeholder="e.g. Sales" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Reports To</label>
+          <select className={inputCls} style={is} value={form.managerId}
+            onChange={e => set("managerId", e.target.value)}>
+            <option value="">(No manager — top level)</option>
+            {managerOptions.map(m => <option key={m.id} value={m.id}>{m.name}{m.title ? ` · ${m.title}` : ""}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>App Role</label>
+          <select className={inputCls} style={is} value={form.role} onChange={e => set("role", e.target.value)}>
+            <option value="admin">Admin — Full access</option>
+            <option value="editor">Editor — Edit own items</option>
+            <option value="viewer">Viewer — Read only</option>
+          </select>
+        </div>
+      </div>
+      <div className="flex gap-3 pt-2">
+        {member && onDelete && (
+          <button onClick={() => onDelete(member.id)}
+            className="px-4 py-2.5 rounded-lg text-sm font-black border transition-colors hover:bg-red-50"
+            style={{ borderColor: "#fca5a5", color: "#dc2626" }}>
+            Remove
+          </button>
+        )}
+        <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-gray-50 transition-colors"
+          style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
+        <button onClick={() => form.name.trim() && onSave(form)} disabled={!form.name.trim()}
+          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-black text-white transition-colors disabled:opacity-40"
+          style={{ backgroundColor: E3.navy }}>
+          {member ? "Save Changes" : "Add Member"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OrgCard({ member, depth, onAddReport, onEdit }) {
+  const [hovered, setHovered] = useState(false);
+  const isRoot = depth === 0;
+  const bg = isRoot ? E3.navy : "white";
+  const fg = isRoot ? "white" : E3.navy;
+  const muted = isRoot ? "rgba(255,255,255,0.55)" : E3.muted;
+  const deptBg = isRoot ? "rgba(255,255,255,0.15)" : E3.accentLight;
+  const deptFg = isRoot ? "white" : E3.accent;
+
+  return (
+    <div style={{ position: "relative", width: 164 }}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <div className="rounded-xl border shadow-sm text-center p-4 flex flex-col items-center gap-1.5"
+        style={{ backgroundColor: bg, borderColor: isRoot ? E3.navyLight : E3.border, width: 164 }}>
+        <Avatar name={member.name} size={isRoot ? 10 : 9} />
+        <div className="font-black text-sm leading-tight" style={{ color: fg }}>{member.name}</div>
+        {member.title && <div className="text-xs leading-tight" style={{ color: muted }}>{member.title}</div>}
+        {member.department && (
+          <div className="text-xs px-2 py-0.5 rounded-full font-bold mt-0.5"
+            style={{ backgroundColor: deptBg, color: deptFg }}>{member.department}</div>
+        )}
+      </div>
+      {/* Hover action buttons */}
+      <div style={{ position: "absolute", top: 6, right: 6, display: "flex", gap: 4,
+        opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}>
+        <button onClick={e => { e.stopPropagation(); onEdit(member); }}
+          className="w-6 h-6 rounded-md flex items-center justify-center"
+          style={{ backgroundColor: isRoot ? "rgba(255,255,255,0.2)" : E3.silver }}>
+          <Edit2 size={10} style={{ color: isRoot ? "white" : E3.muted }} />
+        </button>
+      </div>
+      {/* Add direct report button */}
+      <button onClick={e => { e.stopPropagation(); onAddReport(member.id); }}
+        className="rounded-full flex items-center justify-center shadow border-2"
+        style={{ position: "absolute", bottom: -12, left: "50%", transform: "translateX(-50%)",
+          width: 24, height: 24, backgroundColor: "white", borderColor: E3.accent, color: E3.accent,
+          opacity: hovered ? 1 : 0, transition: "opacity 0.15s", zIndex: 10 }}>
+        <Plus size={11} />
+      </button>
+    </div>
+  );
+}
+
+function OrgNode({ member, allMembers, depth = 0, onAddReport, onEdit }) {
+  const children = allMembers.filter(m => m.managerId === member.id);
+  const LINE = E3.border;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <OrgCard member={member} depth={depth} onAddReport={onAddReport} onEdit={onEdit} />
+      {children.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+          {/* Vertical stem */}
+          <div style={{ width: 2, height: 28, backgroundColor: LINE }} />
+          {/* Children row */}
+          <div style={{ display: "flex", alignItems: "flex-start" }}>
+            {children.map((child, i) => {
+              const isFirst = i === 0;
+              const isLast = i === children.length - 1;
+              const single = children.length === 1;
+              return (
+                <div key={child.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "0 20px" }}>
+                  {/* Horizontal connector */}
+                  {!single && (
+                    <div style={{
+                      height: 2, width: "100%", backgroundColor: LINE,
+                      ...(isFirst ? { clipPath: "inset(0 0 0 50%)" } : {}),
+                      ...(isLast  ? { clipPath: "inset(0 50% 0 0)" }  : {}),
+                    }} />
+                  )}
+                  {/* Vertical drop */}
+                  <div style={{ width: 2, height: 28, backgroundColor: LINE }} />
+                  <OrgNode member={child} allMembers={allMembers} depth={depth + 1}
+                    onAddReport={onAddReport} onEdit={onEdit} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrgChartView({ company, members, canEdit, onAddMember, onEditMember }) {
+  const roots = members.filter(m => !m.managerId || !members.find(p => p.id === m.managerId));
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="font-black text-base" style={{ color: E3.navy }}>Org Chart · {company.name}</h2>
+          <div className="text-xs" style={{ color: E3.muted }}>{members.length} member{members.length !== 1 ? "s" : ""} · hover a card to edit or add a direct report</div>
+        </div>
+        {canEdit && (
+          <button onClick={() => onAddMember(null)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white"
+            style={{ backgroundColor: E3.navy }}>
+            <Plus size={13} /> Add Member
+          </button>
+        )}
+      </div>
+
+      {members.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+            style={{ backgroundColor: E3.accentLight }}>
+            <Network size={28} style={{ color: E3.accent }} />
+          </div>
+          <div className="font-black text-xl mb-2" style={{ color: E3.navy }}>No org chart yet</div>
+          <div className="text-sm mb-6 max-w-sm" style={{ color: E3.muted }}>
+            Add the first position to start building the hierarchy. Hover any card to add direct reports below it.
+          </div>
+          {canEdit && (
+            <button onClick={() => onAddMember(null)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black text-white"
+              style={{ backgroundColor: E3.navy }}>
+              <Plus size={15} /> Add First Member
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto", overflowY: "visible", paddingBottom: 48 }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 48, paddingTop: 16, paddingBottom: 16, minWidth: "fit-content", margin: "0 auto" }}>
+            {roots.map(root => (
+              <OrgNode key={root.id} member={root} allMembers={members} depth={0}
+                onAddReport={onAddMember} onEdit={onEditMember} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TeamView({ company, members, currentUserRole, onInvite }) {
   const ROLE_ICONS = { admin: Shield, editor: PenTool, viewer: Eye };
   return (
@@ -2649,6 +2863,49 @@ export default function E3LevelOrderPlanning() {
     closeModal();
   };
 
+  const handleAddOrgMember = (form) => {
+    const newMember = {
+      id: genId("u"),
+      name: form.name.trim(),
+      email: form.email.trim(),
+      title: form.title.trim(),
+      department: form.department.trim(),
+      managerId: form.managerId || null,
+      role: form.role,
+    };
+    setData(d => ({
+      ...d,
+      companies: d.companies.map(c => c.id === activeCompanyId
+        ? { ...c, members: [...c.members, newMember] } : c)
+    }));
+    closeModal();
+  };
+
+  const handleUpdateOrgMember = (id, form) => {
+    setData(d => ({
+      ...d,
+      companies: d.companies.map(c => c.id === activeCompanyId
+        ? { ...c, members: c.members.map(m => m.id === id
+            ? { ...m, name: form.name.trim(), email: form.email.trim(), title: form.title.trim(),
+                department: form.department.trim(), managerId: form.managerId || null, role: form.role }
+            : m) }
+        : c)
+    }));
+    closeModal();
+  };
+
+  const handleDeleteOrgMember = (id) => {
+    setData(d => ({
+      ...d,
+      companies: d.companies.map(c => c.id === activeCompanyId
+        ? { ...c, members: c.members
+            .filter(m => m.id !== id)
+            .map(m => m.managerId === id ? { ...m, managerId: null } : m) }
+        : c)
+    }));
+    closeModal();
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: E3.silver }}>
       <div className="text-center">
@@ -2665,6 +2922,7 @@ export default function E3LevelOrderPlanning() {
     { id: "scorecard", label: "Scorecard", icon: BarChart2 },
     { id: "charts", label: "Charts", icon: TrendingUp },
     { id: "meeting", label: "Meeting", icon: FileText },
+    { id: "orgchart", label: "Org Chart", icon: Network },
     { id: "team", label: "Team", icon: Users },
   ];
 
@@ -2782,6 +3040,9 @@ export default function E3LevelOrderPlanning() {
           {activeView === "scorecard" && <ScorecardView goals={data.goals} company={company} members={members} onGoalClick={g => setModal({ type: "detail", goal: g })} onUpdateScorecard={handleUpdateScorecard} />}
           {activeView === "charts" && <ChartsView goals={data.goals} company={company} />}
           {activeView === "meeting" && <MeetingView goals={data.goals} company={company} members={members} />}
+          {activeView === "orgchart" && <OrgChartView company={company} members={members} canEdit={canEdit}
+            onAddMember={(managerId) => setModal({ type: "org-member", member: null, managerId })}
+            onEditMember={(member) => setModal({ type: "org-member", member, managerId: null })} />}
           {activeView === "team" && <TeamView company={company} members={members} currentUserRole={userRole} onInvite={() => setModal({ type: "invite" })} />}
         </main>
       </div>
@@ -2820,6 +3081,24 @@ export default function E3LevelOrderPlanning() {
           <ImportGoalsModal members={members} onImport={handleImportGoals} onClose={closeModal} />
         </Modal>
       )}
+      {modal?.type === "org-member" && (() => {
+        const mgr = members.find(m => m.id === modal.managerId);
+        return (
+          <Modal
+            title={modal.member ? "Edit Member" : "Add Team Member"}
+            subtitle={mgr ? `Reporting to: ${mgr.name}` : modal.member ? `Currently: ${modal.member.title || "No title"}` : "Top-level position"}
+            onClose={closeModal}>
+            <OrgMemberForm
+              member={modal.member}
+              members={members}
+              onSave={(form) => modal.member
+                ? handleUpdateOrgMember(modal.member.id, { ...form, managerId: form.managerId || modal.member.managerId || null })
+                : handleAddOrgMember({ ...form, managerId: form.managerId || modal.managerId || null })}
+              onDelete={modal.member ? handleDeleteOrgMember : null}
+              onClose={closeModal} />
+          </Modal>
+        );
+      })()}
     </div>
   );
 }
