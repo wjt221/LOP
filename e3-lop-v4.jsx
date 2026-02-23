@@ -42,12 +42,12 @@ const STATUS_CONFIG = {
 const mkSC = (vals = {}) => Object.fromEntries(MONTHS.map(m => [m, vals[m] ?? null]));
 
 const SEED = {
-  currentUser: { id: "u1", name: "Carlos Mendez", email: "carlos@latamco.com", role: "superadmin" },
+  currentUser: { id: "u1", name: "William Tenenbaum", email: "william@latamco.com", role: "superadmin" },
   companies: [
     {
       id: "c1", name: "LatAm Holdings", industry: "Private Equity / Operations", logo: "LH",
       members: [
-        { id: "u1", name: "Carlos Mendez",  email: "carlos@latamco.com", role: "admin",  title: "CEO",                    department: "Executive",          managerId: null },
+        { id: "u1", name: "William Tenenbaum", email: "william@latamco.com", role: "admin",  title: "CEO",                    department: "Executive",          managerId: null },
         { id: "u2", name: "Sofia Reyes",    email: "sofia@latamco.com",  role: "editor", title: "Mexico Country Head",    department: "Operations",         managerId: "u1" },
         { id: "u3", name: "Miguel Santos",  email: "miguel@latamco.com", role: "editor", title: "DR Country Head",        department: "Operations",         managerId: "u1" },
         { id: "u4", name: "Valentina Cruz", email: "val@latamco.com",    role: "editor", title: "Colombia Country Head",  department: "Operations",         managerId: "u1" },
@@ -58,7 +58,7 @@ const SEED = {
     {
       id: "c2", name: "Meridian Health", industry: "Healthcare", logo: "MH",
       members: [
-        { id: "u1", name: "Carlos Mendez", email: "carlos@latamco.com",  role: "admin",  title: "Board Chair",     department: "Executive",  managerId: null },
+        { id: "u1", name: "William Tenenbaum", email: "william@latamco.com", role: "admin",  title: "Board Chair",     department: "Executive",  managerId: null },
         { id: "u7", name: "Jordan Lee",    email: "jordan@meridian.com", role: "editor", title: "CEO",             department: "Executive",  managerId: "u1" },
         { id: "u8", name: "Dana Kim",      email: "dana@meridian.com",   role: "editor", title: "COO",             department: "Operations", managerId: "u7" },
       ]
@@ -142,7 +142,7 @@ const SEED = {
         { text: "Launch new B2B channel with local distributors", ownerId: "u3", childGoalId: null  },
       ],
       scorecard: mkSC({ Jan: "yellow", Feb: "yellow" }),
-      comments: [{ id: "cm3", userId: "u3", text: "Government renewal process slower than expected — escalating to Carlos.", date: "2026-02-08" }]
+      comments: [{ id: "cm3", userId: "u3", text: "Government renewal process slower than expected — escalating to William.", date: "2026-02-08" }]
     },
     {
       id: "g6", companyId: "c1", orgLevel: "L2", type: "Strategy", cascade: "core",
@@ -2673,6 +2673,7 @@ export default function E3LevelOrderPlanning() {
   const [activeView, setActiveView] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [modal, setModal] = useState(null);
+  const [hoveredCompanyId, setHoveredCompanyId] = useState(null);
 
   useEffect(() => { loadData().then(d => { setData(d || SEED); setLoading(false); }); }, []);
   useEffect(() => { if (data) saveData(data); }, [data]);
@@ -2718,6 +2719,19 @@ export default function E3LevelOrderPlanning() {
     setData(d => ({ ...d, companies: [...d.companies, newCompany] }));
     setActiveCompanyId(id);
     setActiveView("dashboard");
+    closeModal();
+  };
+
+  const handleRemoveCompany = (companyId) => {
+    setData(d => ({
+      ...d,
+      companies: d.companies.filter(c => c.id !== companyId),
+      goals: d.goals.filter(g => g.companyId !== companyId),
+    }));
+    if (activeCompanyId === companyId) {
+      const remaining = data.companies.filter(c => c.id !== companyId);
+      setActiveCompanyId(remaining[0]?.id || null);
+    }
     closeModal();
   };
 
@@ -2953,11 +2967,22 @@ export default function E3LevelOrderPlanning() {
               </button>
             </div>
             {data.companies.map(c => (
-              <button key={c.id} onClick={() => setActiveCompanyId(c.id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${activeCompanyId === c.id ? "bg-white bg-opacity-15" : "hover:bg-white hover:bg-opacity-5"}`}>
-                <div className="w-6 h-6 rounded bg-white bg-opacity-20 text-white text-xs font-black flex items-center justify-center flex-shrink-0">{c.logo}</div>
-                <span className={`text-sm truncate ${activeCompanyId === c.id ? "font-black text-white" : "text-white opacity-50"}`}>{c.name}</span>
-              </button>
+              <div key={c.id} className="flex items-center gap-1"
+                onMouseEnter={() => setHoveredCompanyId(c.id)}
+                onMouseLeave={() => setHoveredCompanyId(null)}>
+                <button onClick={() => setActiveCompanyId(c.id)}
+                  className={`flex-1 flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${activeCompanyId === c.id ? "bg-white bg-opacity-15" : "hover:bg-white hover:bg-opacity-5"}`}>
+                  <div className="w-6 h-6 rounded bg-white bg-opacity-20 text-white text-xs font-black flex items-center justify-center flex-shrink-0">{c.logo}</div>
+                  <span className={`text-sm truncate ${activeCompanyId === c.id ? "font-black text-white" : "text-white opacity-50"}`}>{c.name}</span>
+                </button>
+                <button
+                  onClick={() => setModal({ type: "confirm-remove-company", company: c })}
+                  style={{ opacity: hoveredCompanyId === c.id ? 1 : 0, transition: "opacity 0.15s" }}
+                  className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 hover:bg-red-500"
+                  title={`Remove ${c.name}`}>
+                  <X size={11} className="text-white opacity-60" />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -3099,6 +3124,14 @@ export default function E3LevelOrderPlanning() {
           </Modal>
         );
       })()}
+      {modal?.type === "confirm-remove-company" && (
+        <ConfirmModal
+          title={`Remove "${modal.company.name}"?`}
+          message="This will permanently delete the company and all of its goals. This cannot be undone."
+          confirmLabel="Remove Client"
+          onConfirm={() => handleRemoveCompany(modal.company.id)}
+          onCancel={closeModal} />
+      )}
     </div>
   );
 }
