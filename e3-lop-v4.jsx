@@ -1005,7 +1005,7 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
                 }}>
                 <Avatar name={m.name} size={7} />
                 <div className="text-left">
-                  <div className="text-xs font-black leading-tight" style={{ color: isSelected ? E3.navy : E3.navy }}>
+                  <div className="text-xs font-black leading-tight" style={{ color: E3.navy }}>
                     {m.name}{m.id === currentUser?.id && <span className="ml-1 font-normal" style={{ color: E3.accent }}>(you)</span>}
                   </div>
                   <div className="text-xs leading-tight" style={{ color: E3.muted }}>
@@ -2157,7 +2157,7 @@ export default function E3LevelOrderPlanning() {
   useEffect(() => { loadData().then(d => { setData(d || SEED); setLoading(false); }); }, []);
   useEffect(() => { if (data) saveData(data); }, [data]);
 
-  const company = data?.companies.find(c => c.id === activeCompanyId);
+  const company = data?.companies.find(c => c.id === activeCompanyId) || data?.companies?.[0];
   const members = company?.members || [];
   const currentUser = data?.currentUser;
   const isSuperAdmin = currentUser?.role === "superadmin";
@@ -2182,6 +2182,7 @@ export default function E3LevelOrderPlanning() {
       if (modal?.goal) {
         // ── Editing existing goal ──────────────────────────────────────────
         const idx = goals.findIndex(g => g.id === modal.goal.id);
+        if (idx === -1) return d; // goal was deleted before save completed
         const updatedStrategies = form.strategies.map(s => {
           // Preserve any childGoalId already stored on the matching strategy so
           // editing a parent goal never breaks its existing child-goal links.
@@ -2434,7 +2435,7 @@ export default function E3LevelOrderPlanning() {
 
       {/* Modals */}
       {modal?.type === "detail" && (() => {
-        const liveGoal = data.goals.find(g => g.id === modal.goal.id) || modal.goal;
+        const liveGoal = data.goals.find(g => g.id === modal.goal?.id) || modal.goal;
         return (
           <Modal title="Goal Detail" subtitle={`${liveGoal.orgLevel} · ${liveGoal.type} · ${liveGoal.cascade === "core" ? "Core" : "Flank"}`} onClose={closeModal} wide>
             <GoalDetail goal={liveGoal} allGoals={data.goals} members={members} currentUser={currentUser}
