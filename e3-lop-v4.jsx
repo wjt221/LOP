@@ -1405,20 +1405,19 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
   const status = getGoalStatus(goal);
   const progress = getGoalProgress(goal);
 
-  // Build strategy→L3 links, same pattern as L1Block→L2
-  const strategies = (goal.strategies || []).map(s => {
-    const strat = typeof s === "string" ? { text: s, ownerId: null, childGoalId: null } : s;
-    const childGoal = allGoals.find(g => g.id === strat.childGoalId);
-    const stratOwner = members.find(m => m.id === strat.ownerId);
-    return { ...strat, childGoal, stratOwner };
-  });
-
-  // L3 children added manually (not linked via a strategy)
-  const linkedChildIds = new Set(strategies.map(s => s.childGoalId).filter(Boolean));
-  const unlinkedL3 = allGoals.filter(g => g.parentId === goal.id && !linkedChildIds.has(g.id));
-  const allColumns = [...strategies, ...unlinkedL3.map(g => ({ childGoal: g, text: null, unlinked: true }))];
-  const hasChildren = allColumns.length > 0;
-  const colCount = Math.min(allColumns.length || 1, 3);
+  // Collect L3 children: strategy-linked first, then unlinked
+  const linkedIds3 = new Set(
+    (goal.strategies || []).filter(s => typeof s === "object" && s.childGoalId).map(s => s.childGoalId)
+  );
+  const l3Children = [
+    ...(goal.strategies || [])
+      .filter(s => typeof s === "object" && s.childGoalId)
+      .map(s => allGoals.find(g => g.id === s.childGoalId))
+      .filter(Boolean),
+    ...allGoals.filter(g => g.parentId === goal.id && !linkedIds3.has(g.id)),
+  ];
+  const hasChildren = l3Children.length > 0;
+  const colCount = Math.min(l3Children.length || 1, 3);
 
   return (
     <div className="flex flex-col">
@@ -1442,7 +1441,7 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               {canEdit && (
                 <button onClick={e => { e.stopPropagation(); onAdd(goal.id, "L2"); }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-blue-50"
-                  style={{ color: E3.muted }} title="Add L3 Strategy">
+                  style={{ color: E3.muted }} title="Add L3 Goal">
                   <Plus size={12} />
                 </button>
               )}
@@ -1476,108 +1475,42 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
             )}
             {hasChildren && (
               <span className="text-xs ml-auto" style={{ color: E3.muted }}>
-                {allColumns.length} L3 strateg{allColumns.length === 1 ? "y" : "ies"}
+                {l3Children.length} L3 goal{l3Children.length === 1 ? "" : "s"}
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Strategy connectors → L3 goals */}
+      {/* L3 children */}
       {expanded && hasChildren && (
         <div className="mt-1">
-          {/* Central drop line from L2 card */}
           <div className="flex justify-center">
             <div style={{ width: 2, height: 14, backgroundColor: E3.border }} />
           </div>
-
-          {allColumns.length === 0 ? (
-            canEdit && (
+          <>
+            {l3Children.length > 1 && (
               <div className="flex justify-center">
-                <button onClick={() => onAdd(goal.id, "L2")}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 border-dashed text-xs font-bold"
-                  style={{ borderColor: E3.border, color: E3.muted }}>
-                  <Plus size={12} /> Add a Strategy → becomes an L3 Goal
-                </button>
+                <div style={{
+                  width: `${Math.min((colCount - 1) * 34, 96)}%`,
+                  height: 2, backgroundColor: E3.border
+                }} />
               </div>
-            )
-          ) : (
-            <>
-              {/* Horizontal branch */}
-              {allColumns.length > 1 && (
-                <div className="flex justify-center">
-                  <div style={{
-                    width: `${Math.min((colCount - 1) * 34, 96)}%`,
-                    height: 2, backgroundColor: E3.border
-                  }} />
-                </div>
-              )}
-
-              {/* L3 columns */}
-              <div className="grid gap-2 mt-0"
-                style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
-                {allColumns.map((col, i) => (
-                  <div key={col.childGoal?.id || col.childGoalId || `col-${i}`} className="flex flex-col items-center">
-                    {/* Drop line */}
-                    <div style={{ width: 2, height: 12, backgroundColor: E3.border }} />
-
-                    {/* Strategy label connecting L2 → L3 */}
-                    {col.text && (
-                      <div className="mb-1.5 px-2 py-1.5 rounded-lg text-center w-full"
-                        style={{ backgroundColor: "#f0f7ff", border: `1px solid ${E3.border}` }}>
-                        <div className="text-xs font-black leading-tight" style={{ color: "#2a5cb8", fontSize: 9 }}>
-                          STRATEGY {i + 1}
-                        </div>
-                        <div className="text-xs leading-snug mt-0.5 font-medium" style={{ color: E3.navy }}>
-                          {col.text.length > 55 ? col.text.slice(0, 55) + "…" : col.text}
-                        </div>
-                        {col.stratOwner && (
-                          <div className="flex items-center justify-center gap-1 mt-1">
-                            <Avatar name={col.stratOwner.name} size={3} />
-                            <span style={{ fontSize: 9, color: "#2a5cb8", fontWeight: 700 }}>
-                              {col.stratOwner.name.split(" ")[0]}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {col.unlinked && (
-                      <div className="mb-1.5 px-2 py-1 rounded-lg text-center w-full"
-                        style={{ backgroundColor: E3.silver, border: `1px dashed ${E3.border}` }}>
-                        <div style={{ fontSize: 9, color: E3.muted }}>Unlinked</div>
-                      </div>
-                    )}
-
-                    {/* L3 goal card */}
-                    {col.childGoal ? (
-                      <div className="w-full">
-                        <L3Card goal={col.childGoal} members={members}
-                          onGoalClick={onGoalClick} onAdd={onAdd} canEdit={canEdit} />
-                      </div>
-                    ) : (
-                      <div className="w-full rounded-lg border-2 border-dashed flex items-center justify-center py-3 text-xs font-bold"
-                        style={{ borderColor: E3.border, color: E3.muted }}>
-                        L3 not created yet
-                      </div>
-                    )}
+            )}
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
+              {l3Children.map((l3) => (
+                <div key={l3.id} className="flex flex-col items-center">
+                  <div style={{ width: 2, height: 12, backgroundColor: E3.border }} />
+                  <div className="w-full">
+                    <L3Card goal={l3} members={members} onGoalClick={onGoalClick} onAdd={onAdd} canEdit={canEdit} />
                   </div>
-                ))}
-              </div>
-
-              {/* Add strategy CTA at bottom */}
-              {canEdit && (
-                <div className="flex justify-center mt-2">
-                  <button onClick={() => onAdd(goal.id, "L2")}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors hover:bg-blue-50"
-                    style={{ borderColor: E3.border, color: E3.muted }}>
-                    <Plus size={11} /> Add L3 Strategy
-                  </button>
                 </div>
-              )}
-            </>
-          )}
+              ))}
+            </div>
+          </>
         </div>
       )}
+
     </div>
   );
 }
@@ -1589,22 +1522,18 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
   const status = getGoalStatus(goal);
   const progress = getGoalProgress(goal);
 
-  // Build the display order: use strategies array to order/label each L2 child
-  // A strategy can have a childGoalId (linked) or no linked goal yet
-  const strategies = (goal.strategies || []).map(s => {
-    const strat = typeof s === "string" ? { text: s, ownerId: null, childGoalId: null } : s;
-    const childGoal = allGoals.find(g => g.id === strat.childGoalId);
-    const stratOwner = members.find(m => m.id === strat.ownerId);
-    return { ...strat, childGoal, stratOwner };
-  });
-
-  // L2 children that aren't linked via a strategy (manually added)
-  const linkedChildIds = new Set(strategies.map(s => s.childGoalId).filter(Boolean));
-  const unlinkedL2 = allGoals.filter(g => g.parentId === goal.id && !linkedChildIds.has(g.id));
-
-  // Total columns for grid
-  const allColumns = [...strategies, ...unlinkedL2.map(g => ({ childGoal: g, text: null, unlinked: true }))];
-  const colCount = Math.min(allColumns.length || 1, 3);
+  // Collect L2 children: strategy-linked first (preserves order), then any unlinked
+  const linkedIds = new Set(
+    (goal.strategies || []).filter(s => typeof s === "object" && s.childGoalId).map(s => s.childGoalId)
+  );
+  const l2Children = [
+    ...(goal.strategies || [])
+      .filter(s => typeof s === "object" && s.childGoalId)
+      .map(s => allGoals.find(g => g.id === s.childGoalId))
+      .filter(Boolean),
+    ...allGoals.filter(g => g.parentId === goal.id && !linkedIds.has(g.id)),
+  ];
+  const colCount = Math.min(l2Children.length || 1, 3);
 
   return (
     <div className="mb-10">
@@ -1668,81 +1597,38 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
         )}
       </div>
 
-      {/* Cascade expansion */}
+      {/* L2 children */}
       {expanded && (
         <div>
-          {/* Central drop line */}
           <div className="flex justify-center">
             <div style={{ width: 2, height: 20, backgroundColor: E3.border }} />
           </div>
-
-          {allColumns.length === 0 ? (
-            <div className="flex justify-center mt-2">
-              {canEdit ? (
+          {l2Children.length === 0 ? (
+            canEdit && (
+              <div className="flex justify-center">
                 <button onClick={() => onAdd(goal.id, "L1")}
                   className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-dashed text-sm font-bold"
                   style={{ borderColor: E3.border, color: E3.muted }}>
-                  <Plus size={14} /> Add a Strategy → it becomes an L2 Goal
+                  <Plus size={14} /> Add L2 Goal
                 </button>
-              ) : (
-                <div className="text-sm py-3" style={{ color: E3.muted }}>No strategies defined yet.</div>
-              )}
-            </div>
+              </div>
+            )
           ) : (
             <>
-              {/* Horizontal branch line spanning all columns */}
-              {allColumns.length > 1 && (
-                <div className="flex justify-center mb-0">
+              {l2Children.length > 1 && (
+                <div className="flex justify-center">
                   <div style={{ width: `${(colCount - 1) * (100 / colCount)}%`,
                     height: 2, backgroundColor: E3.border, maxWidth: 900 }} />
                 </div>
               )}
-
-              {/* Strategy labels + drop lines above each L2 card */}
-              <div className="grid gap-4 mt-0" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
-                {allColumns.map((col, i) => (
-                  <div key={col.childGoal?.id || col.childGoalId || `col-${i}`} className="flex flex-col items-center">
-                    {/* Drop line */}
+              <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
+                {l2Children.map(l2 => (
+                  <div key={l2.id} className="flex flex-col items-center">
                     <div style={{ width: 2, height: 16, backgroundColor: E3.border }} />
-
-                    {/* Strategy label pill — "the HOW that became this L2 goal" */}
-                    {col.text && (
-                      <div className="mb-2 px-3 py-1.5 rounded-full text-center max-w-full"
-                        style={{ backgroundColor: E3.accentLight, border: `1px solid ${E3.border}` }}>
-                        <div className="text-xs font-black leading-tight" style={{ color: E3.navy }}>
-                          Strategy {i + 1}
-                        </div>
-                        <div className="text-xs leading-snug mt-0.5" style={{ color: E3.muted }}>
-                          {col.text.length > 60 ? col.text.slice(0, 60) + "…" : col.text}
-                        </div>
-                        {col.stratOwner && (
-                          <div className="flex items-center justify-center gap-1 mt-1.5">
-                            <Avatar name={col.stratOwner.name} size={4} />
-                            <span className="text-xs font-bold" style={{ color: E3.accent }}>{col.stratOwner.name.split(" ")[0]}</span>
-                            <span className="text-xs" style={{ color: E3.muted }}>accountable</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {col.unlinked && (
-                      <div className="mb-2 px-3 py-1 rounded-full text-center"
-                        style={{ backgroundColor: E3.silver, border: `1px dashed ${E3.border}` }}>
-                        <div className="text-xs" style={{ color: E3.muted }}>Manually added</div>
-                      </div>
-                    )}
-
-                    {/* The L2 Goal card */}
-                    {col.childGoal ? (
-                      <div className="w-full">
-                        <L2Card goal={col.childGoal} allGoals={allGoals} members={members}
-                          onGoalClick={onGoalClick} onAdd={onAdd} canEdit={canEdit} />
-                      </div>
-                    ) : (
-                      <div className="w-full rounded-xl border-2 border-dashed flex items-center justify-center py-4 text-xs font-bold"
-                        style={{ borderColor: E3.border, color: E3.muted }}>
-                        L2 goal not created yet
-                      </div>
-                    )}
+                    <div className="w-full">
+                      <L2Card goal={l2} allGoals={allGoals} members={members}
+                        onGoalClick={onGoalClick} onAdd={onAdd} canEdit={canEdit} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1772,7 +1658,7 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
   const searching = search.trim().length > 0;
   const l1Goals = searching
     ? filtered
-    : cg.filter(g => !g.parentId);
+    : cg.filter(g => g.orgLevel === "L1");
 
   // Org-level stats for pyramid summary header
   const levelStats = ORG_LEVELS.map(lv => {
@@ -1793,7 +1679,7 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
               style={{ backgroundColor: lv.color, clipPath: i === 0 ? "none" : undefined }}>
               <div className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">{lv.short}</div>
               <div className="text-2xl font-black mb-0.5">{lv.count}</div>
-              <div className="text-xs opacity-50 mb-2">{i === 0 ? "Goals" : i === 1 ? "Strategies" : "Tactics"}</div>
+              <div className="text-xs opacity-50 mb-2">Goals</div>
               <div className="flex justify-center gap-2">
                 {lv.green > 0 && <span className="text-xs font-bold" style={{ color: "#6ee7b7" }}>{lv.green}●</span>}
                 {lv.yellow > 0 && <span className="text-xs font-bold" style={{ color: "#fcd34d" }}>{lv.yellow}▲</span>}
