@@ -2330,10 +2330,10 @@ export default function E3LevelOrderPlanning() {
   ];
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: E3.silver, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: E3.silver, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "w-60" : "w-16"} transition-all duration-300 flex flex-col flex-shrink-0 z-20`}
-        style={{ backgroundColor: E3.navy, minHeight: "100vh" }}>
+      <aside className={`${sidebarOpen ? "w-60" : "w-16"} h-screen transition-all duration-300 flex flex-col flex-shrink-0 z-20`}
+        style={{ backgroundColor: E3.navy }}>
         <div className="flex items-center gap-3 px-4 py-5 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white">
             <span className="font-black text-xs" style={{ color: E3.navy }}>E3</span>
