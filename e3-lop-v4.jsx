@@ -451,20 +451,20 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
       {/* Level / Type / Cascade */}
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
           <select className={inputCls} style={is} value={form.orgLevel}
             onChange={e => { set("orgLevel", e.target.value); set("type", typeForLevel[e.target.value]); }}>
             {ORG_LEVELS.map(l => <option key={l.id} value={l.id}>{l.short}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Type</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Type</label>
           <select className={inputCls} style={is} value={form.type} onChange={e => set("type", e.target.value)}>
             {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Cascade</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Cascade</label>
           <select className={inputCls} style={is} value={form.cascade} onChange={e => set("cascade", e.target.value)}>
             <option value="core">Core</option>
             <option value="flank">Flank</option>
@@ -474,21 +474,21 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
 
       {/* Goal title */}
       <div>
-        <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Goal Statement *</label>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Goal Statement *</label>
         <input className={inputCls} style={is} value={form.title}
           onChange={e => set("title", e.target.value)} placeholder="Expression of success for your group..." />
       </div>
 
       {/* Metric */}
       <div>
-        <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Key Metric</label>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Key Metric</label>
         <input className={inputCls} style={is} value={form.metric}
           onChange={e => set("metric", e.target.value)} placeholder="e.g. $25M EBITDA by Dec 31" />
       </div>
 
       {/* Description */}
       <div>
-        <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Description / Context</label>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Description / Context</label>
         <textarea rows={2} className={inputCls + " resize-none"} style={is}
           value={form.description} onChange={e => set("description", e.target.value)} />
       </div>
@@ -496,13 +496,13 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
       {/* Owner + Due Date */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Goal Owner</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Goal Owner</label>
           <select className={inputCls} style={is} value={form.owner} onChange={e => set("owner", e.target.value)}>
             {members.map(m => <option key={m.id} value={m.id}>{m.name}{m.title ? ` — ${m.title}` : ""}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Due Date</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Due Date</label>
           <input type="date" className={inputCls} style={is} value={form.dueDate} onChange={e => set("dueDate", e.target.value)} />
         </div>
       </div>
@@ -512,7 +512,7 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
         <div className="rounded-xl border overflow-hidden" style={{ borderColor: E3.border }}>
           <div className="flex items-center justify-between px-4 py-3" style={{ backgroundColor: E3.silver }}>
             <div>
-              <div className="text-xs font-black uppercase tracking-wider" style={{ color: E3.navy }}>
+              <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: E3.navy }}>
                 Strategies → These become {childLevel} Goals
               </div>
               <div className="text-xs mt-0.5" style={{ color: E3.muted }}>
@@ -542,7 +542,7 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
                 </div>
                 {/* Owner for this strategy = accountable for the L2 goal */}
                 <div className="flex items-center gap-2 pl-7">
-                  <span className="text-xs font-black uppercase tracking-wider flex-shrink-0" style={{ color: E3.muted }}>
+                  <span className="text-xs font-semibold uppercase tracking-wider flex-shrink-0" style={{ color: E3.muted }}>
                     {childLevel} Owner:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -654,7 +654,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
       {progress > 0 && (
         <div className="rounded-xl p-3" style={{ backgroundColor: E3.silver }}>
           <div className="flex items-center justify-between mb-1.5">
-            <div className="text-xs font-black uppercase tracking-wider" style={{ color: E3.muted }}>On-Track Rate</div>
+            <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: E3.muted }}>On-Track Rate</div>
             <span className="text-xs font-black" style={{ color: progress >= 70 ? "#059669" : progress >= 40 ? "#b45309" : "#dc2626" }}>{progress}%</span>
           </div>
           <ProgressBar value={progress} color={progress >= 70 ? "#059669" : progress >= 40 ? "#f59e0b" : "#dc2626"} />
@@ -673,7 +673,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
       {goal.strategies?.length > 0 && (
         <div className="rounded-xl border overflow-hidden" style={{ borderColor: E3.border }}>
           <div className="px-4 py-3 flex items-center gap-2" style={{ backgroundColor: E3.silver }}>
-            <div className="text-xs font-black uppercase tracking-wider" style={{ color: E3.navy }}>
+            <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: E3.navy }}>
               Strategies → Cascade Down
             </div>
             <span className="text-xs ml-auto" style={{ color: E3.muted }}>
@@ -723,14 +723,14 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl p-3" style={{ backgroundColor: E3.silver }}>
-          <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: E3.muted }}>Owner</div>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: E3.muted }}>Owner</div>
           <div className="flex items-center gap-2">
             <Avatar name={owner?.name} size={6} />
             <span className="text-sm font-bold" style={{ color: E3.navy }}>{owner?.name || "—"}</span>
           </div>
         </div>
         <div className="rounded-xl p-3" style={{ backgroundColor: E3.silver }}>
-          <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: E3.muted }}>Due Date</div>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: E3.muted }}>Due Date</div>
           <span className="text-sm font-bold" style={{ color: E3.navy }}>{goal.dueDate || "Not set"}</span>
         </div>
       </div>
@@ -738,7 +738,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
       {/* Monthly scorecard — click to cycle */}
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <div className="text-xs font-black uppercase tracking-wider" style={{ color: E3.muted }}>Monthly Scorecard</div>
+          <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: E3.muted }}>Monthly Scorecard</div>
           <span className="text-xs" style={{ color: E3.muted }}>· click dot to cycle</span>
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -765,7 +765,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
 
       {children.length > 0 && (
         <div>
-          <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: E3.muted }}>Cascades To ({children.length})</div>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: E3.muted }}>Cascades To ({children.length})</div>
           <div className="space-y-1.5">
             {children.map(c => (
               <div key={c.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border" style={{ borderColor: E3.border }}>
@@ -779,7 +779,7 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
       )}
 
       <div>
-        <div className="text-xs font-black uppercase tracking-wider mb-3" style={{ color: E3.muted }}>Comments</div>
+        <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: E3.muted }}>Comments</div>
         <div className="space-y-3 mb-3">
           {!goal.comments?.length && <div className="text-sm" style={{ color: E3.muted }}>No comments yet.</div>}
           {goal.comments?.map(c => {
@@ -859,7 +859,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
       <div className="p-5 space-y-4 bg-white">
         {/* Owner selector */}
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider mb-2" style={{ color: E3.muted }}>Assign To</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: E3.muted }}>Assign To</label>
           <div className="flex flex-wrap gap-2">
             {members.map(m => (
               <button key={m.id} onClick={() => set("owner", m.id)}
@@ -879,20 +879,20 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
         {/* Level / Type / Cascade */}
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
             <select className={inputCls} style={is} value={form.orgLevel}
               onChange={e => { set("orgLevel", e.target.value); set("type", typeForLevel[e.target.value]); }}>
               {ORG_LEVELS.map(l => <option key={l.id} value={l.id}>{l.short} – {l.label.split("–")[1]?.trim()}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Type</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Type</label>
             <select className={inputCls} style={is} value={form.type} onChange={e => set("type", e.target.value)}>
               {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Cascade</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Cascade</label>
             <select className={inputCls} style={is} value={form.cascade} onChange={e => set("cascade", e.target.value)}>
               <option value="core">Core</option>
               <option value="flank">Flank</option>
@@ -902,7 +902,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
 
         {/* Title */}
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Goal Statement *</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Goal Statement *</label>
           <input className={inputCls} style={is} value={form.title}
             onChange={e => set("title", e.target.value)}
             placeholder="Expression of success for this person's group..."
@@ -911,7 +911,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
 
         {/* Metric */}
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Key Metric</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Key Metric</label>
           <input className={inputCls} style={is} value={form.metric}
             onChange={e => set("metric", e.target.value)}
             placeholder="e.g. Increase NPS by 5 points" />
@@ -919,7 +919,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Due Date</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Due Date</label>
             <input type="date" className={inputCls} style={is} value={form.dueDate}
               onChange={e => set("dueDate", e.target.value)} />
           </div>
@@ -967,7 +967,7 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
       <div className="rounded-2xl p-5 text-white" style={{ backgroundColor: E3.navy }}>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <div className="text-xs font-black uppercase tracking-widest opacity-50 mb-1">Organizational Health Score</div>
+            <div className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-1">Organizational Health Score</div>
             <div className="text-5xl font-black mb-1" style={{ color: healthColor }}>
               {health}<span className="text-2xl font-normal opacity-40">/100</span>
             </div>
@@ -989,7 +989,7 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
       {/* Member toggle — avatar pills */}
       <div className="bg-white rounded-2xl border shadow-sm p-4" style={{ borderColor: E3.border }}>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-xs font-black uppercase tracking-widest" style={{ color: E3.muted }}>Viewing Scorecard For</div>
+          <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: E3.muted }}>Viewing Scorecard For</div>
           <button onClick={() => { setShowAddForm(s => !s); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-colors"
             style={{ backgroundColor: showAddForm ? E3.navy : E3.accentLight, color: showAddForm ? "white" : E3.accent }}>
@@ -1219,7 +1219,7 @@ function L3Card({ goal, members, onGoalClick, onAdd, canEdit }) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-xs font-black uppercase tracking-wider" style={{ color: ORG_LEVELS[2].color, fontSize: 9 }}>L3 Tactic</span>
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: ORG_LEVELS[2].color, fontSize: 9 }}>L3 Tactic</span>
               <CascadeBadge cascade={goal.cascade} />
               {status && <StatusDot status={status} size={8} />}
             </div>
@@ -1276,7 +1276,7 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                <span className="text-xs font-black uppercase tracking-wider"
+                <span className="text-xs font-semibold uppercase tracking-wider"
                   style={{ color: ORG_LEVELS[1].color, fontSize: 9 }}>L2 Goal</span>
                 <CascadeBadge cascade={goal.cascade} />
                 {status && <StatusDot status={status} size={9} />}
@@ -1462,7 +1462,7 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded"
+              <span className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
                 style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>L1 Goal</span>
               <CascadeBadge cascade={goal.cascade} />
               {status && <StatusDot status={status} size={10} />}
@@ -1638,7 +1638,7 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
           {levelStats.map((lv, i) => (
             <div key={lv.id} className="flex-1 text-white p-4 text-center relative"
               style={{ backgroundColor: lv.color, clipPath: i === 0 ? "none" : undefined }}>
-              <div className="text-xs font-black uppercase tracking-widest opacity-60 mb-1">{lv.short}</div>
+              <div className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">{lv.short}</div>
               <div className="text-2xl font-black mb-0.5">{lv.count}</div>
               <div className="text-xs opacity-50 mb-2">{i === 0 ? "Goals" : i === 1 ? "Strategies" : "Tactics"}</div>
               <div className="flex justify-center gap-2">
@@ -1656,7 +1656,7 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
           ))}
         </div>
         <div className="px-5 py-2.5 flex items-center justify-between gap-4" style={{ backgroundColor: E3.silver }}>
-          <div className="text-xs font-black uppercase tracking-widest" style={{ color: E3.muted }}>
+          <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: E3.muted }}>
             Level Order Planning · L1 Goals cascade into L2 Strategies which cascade into L3 Tactics
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1793,7 +1793,7 @@ function ScorecardView({ goals, company, members, onGoalClick, onUpdateScorecard
           </table>
         </div>
         <div className="px-6 py-3 border-t flex items-center gap-4" style={{ borderColor: E3.border, backgroundColor: E3.silver }}>
-          <span className="text-xs font-black uppercase tracking-wider" style={{ color: E3.muted }}>Legend:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: E3.muted }}>Legend:</span>
           {Object.entries(STATUS_CONFIG).map(([k, v]) => (
             <div key={k} className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.dot }} />
@@ -1845,7 +1845,7 @@ function ChartsView({ goals, company }) {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-5">
         <div className={card} style={{ borderColor: E3.border }}>
-          <div className="text-xs font-black uppercase tracking-wider mb-4" style={{ color: E3.navy }}>Goal Status by Org Level</div>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: E3.navy }}>Goal Status by Org Level</div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={byLevel} barSize={20}>
               <CartesianGrid strokeDasharray="3 3" stroke={E3.border} />
@@ -1859,7 +1859,7 @@ function ChartsView({ goals, company }) {
           </ResponsiveContainer>
         </div>
         <div className={card} style={{ borderColor: E3.border }}>
-          <div className="text-xs font-black uppercase tracking-wider mb-4" style={{ color: E3.navy }}>Core vs. Flank Goals</div>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: E3.navy }}>Core vs. Flank Goals</div>
           <div className="flex items-center gap-6">
             <ResponsiveContainer width={150} height={150}>
               <PieChart>
@@ -1885,7 +1885,7 @@ function ChartsView({ goals, company }) {
       </div>
       <div className={card} style={{ borderColor: E3.border }}>
         <div className="flex items-center justify-between mb-4">
-          <div className="text-xs font-black uppercase tracking-wider" style={{ color: E3.navy }}>On-Track % by Level — Live from Scorecard</div>
+          <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: E3.navy }}>On-Track % by Level — Live from Scorecard</div>
           <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ backgroundColor: E3.accentLight, color: E3.accent }}>Real Data</span>
         </div>
         {trend.length < 2 ? (
@@ -1976,7 +1976,7 @@ function MeetingView({ goals, company, members }) {
                   <Avatar name={owner?.name} size={7} />
                 </div>
                 <div className="mt-3 pt-3 border-t" style={{ borderColor: E3.border }}>
-                  <div className="text-xs font-black uppercase tracking-wider mb-1" style={{ color: E3.muted }}>Discussion Points</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: E3.muted }}>Discussion Points</div>
                   <div className="text-xs space-y-0.5" style={{ color: E3.muted }}>
                     <div>• What's blocking progress toward: <em>{g.metric}</em>?</div>
                     <div>• Which strategy needs adjustment?</div>
@@ -2042,7 +2042,7 @@ function MeetingView({ goals, company, members }) {
       <div className="px-8 py-6 border-b" style={{ backgroundColor: E3.navy, borderColor: E3.navyLight }}>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <div className="text-xs font-black uppercase tracking-widest text-white opacity-40 mb-1">E3 Strategy Cascade · Level Order Planning</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-white opacity-40 mb-1">E3 Strategy Cascade · Level Order Planning</div>
             <h2 className="text-xl font-black text-white">Weekly Leadership Review</h2>
             <div className="text-sm text-white opacity-40 mt-1">{dateStr} · {company.name}</div>
           </div>
@@ -2125,12 +2125,12 @@ function InviteForm({ onSave, onClose }) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Email</label>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Email</label>
         <input type="email" className={inp} style={{ borderColor: E3.border, color: E3.navy }}
           value={email} onChange={e => setEmail(e.target.value)} placeholder="colleague@company.com" />
       </div>
       <div>
-        <label className="block text-xs font-black uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Role</label>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Role</label>
         <select className={inp} style={{ borderColor: E3.border, color: E3.navy }}
           value={role} onChange={e => setRole(e.target.value)}>
           <option value="admin">Admin — Full access</option>
@@ -2315,7 +2315,7 @@ export default function E3LevelOrderPlanning() {
       <div className="text-center">
         <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-3"
           style={{ borderColor: E3.navy, borderTopColor: "transparent" }} />
-        <div className="text-xs font-black uppercase tracking-widest" style={{ color: E3.muted }}>Loading...</div>
+        <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: E3.muted }}>Loading...</div>
       </div>
     </div>
   );
@@ -2330,7 +2330,7 @@ export default function E3LevelOrderPlanning() {
   ];
 
   return (
-    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: E3.silver, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: E3.silver, fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? "w-60" : "w-16"} h-screen transition-all duration-300 flex flex-col flex-shrink-0 z-20`}
         style={{ backgroundColor: E3.navy }}>
@@ -2348,7 +2348,7 @@ export default function E3LevelOrderPlanning() {
 
         {sidebarOpen && isSuperAdmin && (
           <div className="px-3 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-            <div className="text-xs font-black uppercase tracking-widest px-2 mb-2 opacity-30 text-white">Clients</div>
+            <div className="text-xs font-semibold uppercase tracking-widest px-2 mb-2 opacity-30 text-white">Clients</div>
             {data.companies.map(c => (
               <button key={c.id} onClick={() => setActiveCompanyId(c.id)}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${activeCompanyId === c.id ? "bg-white bg-opacity-15" : "hover:bg-white hover:bg-opacity-5"}`}>
@@ -2360,7 +2360,7 @@ export default function E3LevelOrderPlanning() {
         )}
         {sidebarOpen && !isSuperAdmin && (
           <div className="px-5 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-            <div className="text-xs font-black uppercase tracking-widest opacity-30 text-white mb-1">Workspace</div>
+            <div className="text-xs font-semibold uppercase tracking-widest opacity-30 text-white mb-1">Workspace</div>
             <div className="text-sm font-black text-white">{company?.name}</div>
           </div>
         )}
@@ -2411,7 +2411,7 @@ export default function E3LevelOrderPlanning() {
           </div>
           <div className="flex items-center gap-2">
             {isSuperAdmin && (
-              <div className="text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-full"
+              <div className="text-xs font-semibold uppercase tracking-widest px-2.5 py-1 rounded-full"
                 style={{ backgroundColor: E3.accentLight, color: E3.accent }}>Super Admin</div>
             )}
             {canEdit && (activeView === "cascade" || activeView === "scorecard") && (
