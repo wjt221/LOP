@@ -585,6 +585,20 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
       <div className="flex gap-3 pt-2">
         <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-gray-50 transition-colors"
           style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
+        {!goal && (
+          <button
+            onClick={() => onSave({
+              ...form,
+              strategies: form.strategies.filter(s => s.text.trim()),
+              companyId,
+              parentId
+            }, true)}
+            disabled={!form.title}
+            className="px-4 py-2.5 rounded-lg text-sm font-black transition-colors disabled:opacity-40 border"
+            style={{ borderColor: E3.accent, color: E3.accent, backgroundColor: E3.accentLight }}>
+            Save & Add Another
+          </button>
+        )}
         <button
           onClick={() => onSave({
             ...form,
@@ -936,7 +950,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
   );
 }
 
-function DashboardView({ goals, company, members, currentUser, onGoalClick, onAddGoal }) {
+function DashboardView({ goals, company, members, currentUser, onGoalClick, onAddGoal, onOpenGoalModal }) {
   const cg = goals.filter(g => g.companyId === company.id);
   const [selectedMemberId, setSelectedMemberId] = useState(
     members.find(m => m.id === currentUser?.id)?.id || members[0]?.id
@@ -960,6 +974,26 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
 
   const isViewingOwn = selectedMemberId === currentUser?.id;
   const atRiskGoals = memberGoals.filter(g => ["yellow", "red"].includes(getGoalStatus(g)));
+
+  if (cg.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+          style={{ backgroundColor: E3.accentLight }}>
+          <Layers size={28} style={{ color: E3.accent }} />
+        </div>
+        <div className="font-black text-xl mb-2" style={{ color: E3.navy }}>{company.name} has no goals yet</div>
+        <div className="text-sm mb-6 max-w-sm" style={{ color: E3.muted }}>
+          Start by adding your first L1 leadership goal. Each goal can cascade strategies down to L2 and L3 teams.
+        </div>
+        <button onClick={onOpenGoalModal}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black text-white"
+          style={{ backgroundColor: E3.navy }}>
+          <Plus size={15} /> Add First Goal
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -2151,6 +2185,53 @@ function InviteForm({ onSave, onClose }) {
   );
 }
 
+// ─── ADD COMPANY FORM ─────────────────────────────────────────────────────────
+function AddCompanyForm({ onSave, onClose }) {
+  const [form, setForm] = useState({ name: "", industry: "", logo: "" });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const inputCls = "w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all";
+  const is = { borderColor: E3.border, color: E3.navy };
+
+  const autoLogo = form.name.trim().split(/\s+/).map(w => w[0]).join("").toUpperCase().slice(0, 2);
+  const logo = form.logo || autoLogo;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Client Name *</label>
+        <input className={inputCls} style={is} value={form.name}
+          onChange={e => { set("name", e.target.value); set("logo", ""); }}
+          placeholder="e.g. Acme Corporation" autoFocus />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Industry</label>
+        <input className={inputCls} style={is} value={form.industry}
+          onChange={e => set("industry", e.target.value)}
+          placeholder="e.g. Healthcare, Finance, Technology" />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Logo Initials</label>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm text-white flex-shrink-0"
+            style={{ backgroundColor: E3.navy }}>{logo || "?"}</div>
+          <input className={inputCls} style={is} value={form.logo} maxLength={2}
+            onChange={e => set("logo", e.target.value.toUpperCase().slice(0, 2))}
+            placeholder={autoLogo || "AB"} />
+        </div>
+        <div className="text-xs mt-1" style={{ color: E3.muted }}>Auto-generated from name, or enter up to 2 characters.</div>
+      </div>
+      <div className="flex gap-3 pt-2">
+        <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold border hover:bg-gray-50 transition-colors"
+          style={{ borderColor: E3.border, color: E3.muted }}>Cancel</button>
+        <button onClick={() => form.name.trim() && onSave({ name: form.name.trim(), industry: form.industry.trim(), logo: logo || "?" })}
+          disabled={!form.name.trim()}
+          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-black text-white transition-colors disabled:opacity-40"
+          style={{ backgroundColor: E3.navy }}>Add Client</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function E3LevelOrderPlanning() {
   const [data, setData] = useState(null);
@@ -2171,7 +2252,22 @@ export default function E3LevelOrderPlanning() {
   const canEdit = ["admin","superadmin","editor"].includes(userRole);
   const closeModal = () => setModal(null);
 
-  const handleSaveGoal = (form) => {
+  const handleAddCompany = ({ name, industry, logo }) => {
+    const id = genId();
+    const newCompany = {
+      id,
+      name,
+      industry,
+      logo,
+      members: [{ ...currentUser, role: "admin" }],
+    };
+    setData(d => ({ ...d, companies: [...d.companies, newCompany] }));
+    setActiveCompanyId(id);
+    setActiveView("dashboard");
+    closeModal();
+  };
+
+  const handleSaveGoal = (form, addAnother = false) => {
     const nextLevel = { L1: "L2", L2: "L3", L3: null };
     const typeForLevel = { L1: "Goal", L2: "Strategy", L3: "Tactic" };
     const emptyScorecard = Object.fromEntries(MONTHS.map(m => [m, null]));
@@ -2260,9 +2356,12 @@ export default function E3LevelOrderPlanning() {
 
       return { ...d, goals };
     });
-    closeModal();
+    if (addAnother) {
+      setModal({ type: "add", parentId: null, orgLevel: "L1" });
+    } else {
+      closeModal();
+    }
   };
-
 
   const handleAddGoalDirect = (newGoal) => {
     setData(d => ({ ...d, goals: [...d.goals, newGoal] }));
@@ -2348,7 +2447,13 @@ export default function E3LevelOrderPlanning() {
 
         {sidebarOpen && isSuperAdmin && (
           <div className="px-3 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-            <div className="text-xs font-semibold uppercase tracking-widest px-2 mb-2 opacity-30 text-white">Clients</div>
+            <div className="flex items-center justify-between px-2 mb-2">
+              <div className="text-xs font-semibold uppercase tracking-widest opacity-30 text-white">Clients</div>
+              <button onClick={() => setModal({ type: "add-company" })}
+                className="flex items-center gap-1 text-xs font-bold text-white opacity-50 hover:opacity-100 transition-opacity">
+                <Plus size={11} /> Add
+              </button>
+            </div>
             {data.companies.map(c => (
               <button key={c.id} onClick={() => setActiveCompanyId(c.id)}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${activeCompanyId === c.id ? "bg-white bg-opacity-15" : "hover:bg-white hover:bg-opacity-5"}`}>
@@ -2425,7 +2530,7 @@ export default function E3LevelOrderPlanning() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
-          {activeView === "dashboard" && <DashboardView goals={data.goals} company={company} members={members} currentUser={currentUser} onGoalClick={g => setModal({ type: "detail", goal: g })} onAddGoal={handleAddGoalDirect} />}
+          {activeView === "dashboard" && <DashboardView goals={data.goals} company={company} members={members} currentUser={currentUser} onGoalClick={g => setModal({ type: "detail", goal: g })} onAddGoal={handleAddGoalDirect} onOpenGoalModal={() => setModal({ type: "add", parentId: null, orgLevel: "L1" })} />}
           {activeView === "cascade" && <CascadeView goals={data.goals} company={company} members={members} onGoalClick={g => setModal({ type: "detail", goal: g })} onAdd={(parentId, orgLevel) => setModal({ type: "add", parentId, orgLevel })} canEdit={canEdit} />}
           {activeView === "scorecard" && <ScorecardView goals={data.goals} company={company} members={members} onGoalClick={g => setModal({ type: "detail", goal: g })} onUpdateScorecard={handleUpdateScorecard} />}
           {activeView === "charts" && <ChartsView goals={data.goals} company={company} />}
@@ -2456,6 +2561,11 @@ export default function E3LevelOrderPlanning() {
       {modal?.type === "invite" && (
         <Modal title="Invite Team Member" onClose={closeModal}>
           <InviteForm onSave={handleInvite} onClose={closeModal} />
+        </Modal>
+      )}
+      {modal?.type === "add-company" && (
+        <Modal title="Add New Client" subtitle="Create a new client workspace" onClose={closeModal}>
+          <AddCompanyForm onSave={handleAddCompany} onClose={closeModal} />
         </Modal>
       )}
     </div>
