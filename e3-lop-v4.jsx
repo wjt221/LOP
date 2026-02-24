@@ -1039,7 +1039,7 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
   });
 
   // Build reporting groups from managerId hierarchy
-  const memberGroups = React.useMemo(() => {
+  const memberGroups = useMemo(() => {
     const q = memberSearch.toLowerCase();
     const filtered = q
       ? members.filter(m => m.name.toLowerCase().includes(q) || m.title?.toLowerCase().includes(q))
