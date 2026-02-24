@@ -67,7 +67,7 @@ const SEED = {
   goals: [
     // ── L1 GOALS ─────────────────────────────────────────────────────────────
     {
-      id: "g1", companyId: "c1", orgLevel: "L1", type: "Goal", cascade: "core",
+      id: "g1", companyId: "c1", orgLevel: "L1", type: "Goal",
       title: "Drive $50M in EBITDA",
       metric: "Consolidated EBITDA of $50M by Dec 31",
       description: "Achieve profitability targets across all three operating markets through disciplined growth and cost management.",
@@ -81,7 +81,7 @@ const SEED = {
       comments: [{ id: "cm1", userId: "u1", text: "Mexico ahead of plan. DR needs acceleration in Q2.", date: "2026-02-05" }]
     },
     {
-      id: "g2", companyId: "c1", orgLevel: "L1", type: "Goal", cascade: "core",
+      id: "g2", companyId: "c1", orgLevel: "L1", type: "Goal",
       title: "Achieve 95% Customer Retention Across All Markets",
       metric: "≤5% churn rate measured quarterly",
       description: "Protect and grow existing revenue base through best-in-class service delivery.",
@@ -95,7 +95,7 @@ const SEED = {
       comments: []
     },
     {
-      id: "g3", companyId: "c1", orgLevel: "L1", type: "Goal", cascade: "core",
+      id: "g3", companyId: "c1", orgLevel: "L1", type: "Goal",
       title: "Build High-Performance Leadership Bench",
       metric: "Leadership readiness score ≥ 4.0/5.0 by Q3",
       description: "Develop the next tier of leaders to support regional scale plans.",
@@ -113,7 +113,7 @@ const SEED = {
 
     // ── L2 GOALS — Cascade from g1 (Drive $50M EBITDA) ───────────────────────
     {
-      id: "g4", companyId: "c1", orgLevel: "L2", type: "Strategy", cascade: "core",
+      id: "g4", companyId: "c1", orgLevel: "L2", type: "Strategy",
       title: "Generate $25M EBITDA from Mexico Operations",
       metric: "$25M EBITDA contribution from MX by Dec 31",
       description: "Mexico is the primary growth engine. Expand revenue, tighten cost structure, and scale the enterprise segment.",
@@ -129,7 +129,7 @@ const SEED = {
       comments: [{ id: "cm2", userId: "u2", text: "Pipeline for enterprise deals is strong — 18 in late stage as of Feb.", date: "2026-02-10" }]
     },
     {
-      id: "g5", companyId: "c1", orgLevel: "L2", type: "Strategy", cascade: "core",
+      id: "g5", companyId: "c1", orgLevel: "L2", type: "Strategy",
       title: "Generate $15M EBITDA from Dominican Republic",
       metric: "$15M EBITDA contribution from DR by Dec 31",
       description: "Accelerate growth in the Dominican market through market penetration and operational improvements.",
@@ -145,7 +145,7 @@ const SEED = {
       comments: [{ id: "cm3", userId: "u3", text: "Government renewal process slower than expected — escalating to William.", date: "2026-02-08" }]
     },
     {
-      id: "g6", companyId: "c1", orgLevel: "L2", type: "Strategy", cascade: "core",
+      id: "g6", companyId: "c1", orgLevel: "L2", type: "Strategy",
       title: "Generate $10M EBITDA from Colombia Operations",
       metric: "$10M EBITDA contribution from COL by Dec 31",
       description: "Colombia is the emerging market. Focus on customer acquisition and operational foundation.",
@@ -163,7 +163,7 @@ const SEED = {
 
     // ── L2 GOALS — Cascade from g2 (Customer Retention) ──────────────────────
     {
-      id: "g7", companyId: "c1", orgLevel: "L2", type: "Strategy", cascade: "core",
+      id: "g7", companyId: "c1", orgLevel: "L2", type: "Strategy",
       title: "Drive Mexico Customer Retention to 97%",
       metric: "97% retention rate on rolling 12-month cohort",
       description: "Mexico retention is core to EBITDA stability. Proactive account management is the lever.",
@@ -179,7 +179,7 @@ const SEED = {
       comments: []
     },
     {
-      id: "g8", companyId: "c1", orgLevel: "L2", type: "Strategy", cascade: "core",
+      id: "g8", companyId: "c1", orgLevel: "L2", type: "Strategy",
       title: "Drive Dominican Republic Customer Retention to 95%",
       metric: "95% retention rate on rolling 12-month cohort",
       description: "Reduce churn driven by service quality gaps and slow issue resolution.",
@@ -195,7 +195,7 @@ const SEED = {
       comments: [{ id: "cm4", userId: "u3", text: "Two large accounts at risk — escalated to retention team.", date: "2026-02-14" }]
     },
     {
-      id: "g9", companyId: "c1", orgLevel: "L2", type: "Strategy", cascade: "core",
+      id: "g9", companyId: "c1", orgLevel: "L2", type: "Strategy",
       title: "Drive Colombia Customer Retention to 93%",
       metric: "93% retention rate on rolling 12-month cohort",
       description: "As a newer market, Colombia needs strong onboarding to anchor retention.",
@@ -213,7 +213,7 @@ const SEED = {
 
     // ── L3 GOALS — Cascade from g4 (Mexico EBITDA strategies) ────────────────
     {
-      id: "g10", companyId: "c1", orgLevel: "L3", type: "Tactic", cascade: "core",
+      id: "g10", companyId: "c1", orgLevel: "L3", type: "Tactic",
       title: "Close 40 New Enterprise Contracts in H1",
       metric: "40 signed contracts >$100K by June 30",
       description: "Drive enterprise pipeline velocity through focused sales execution.",
@@ -229,7 +229,7 @@ const SEED = {
       comments: []
     },
     {
-      id: "g11", companyId: "c1", orgLevel: "L3", type: "Tactic", cascade: "core",
+      id: "g11", companyId: "c1", orgLevel: "L3", type: "Tactic",
       title: "Reduce Mexico Operating Cost Ratio to 55%",
       metric: "OpEx as % of revenue ≤ 55% by Q4",
       description: "Improve unit economics by renegotiating vendor contracts and automating manual processes.",
@@ -247,7 +247,7 @@ const SEED = {
 
     // ── Meridian Health (company c2) ──────────────────────────────────────────
     {
-      id: "g20", companyId: "c2", orgLevel: "L1", type: "Goal", cascade: "core",
+      id: "g20", companyId: "c2", orgLevel: "L1", type: "Goal",
       title: "Onboard 25 Hospital Systems",
       metric: "25 signed contracts with hospital groups by Dec 31",
       description: "Expand network through direct sales and health system partnerships.",
@@ -261,7 +261,7 @@ const SEED = {
       comments: [{ id: "cm10", userId: "u7", text: "Sales cycle 40% longer than expected. Revised to 18-20 systems unless strategy changes.", date: "2026-02-05" }]
     },
     {
-      id: "g21", companyId: "c2", orgLevel: "L1", type: "Goal", cascade: "core",
+      id: "g21", companyId: "c2", orgLevel: "L1", type: "Goal",
       title: "Achieve $8M ARR",
       metric: "$8M ARR from subscription + implementation fees",
       description: "Revenue target driven by hospital system onboarding velocity.",
@@ -434,10 +434,12 @@ function StatusDot({ status, size = 14, onClick, interactive }) {
 function OrgLevelBadge({ orgLevel }) {
   const lv = ORG_LEVELS.find(l => l.id === orgLevel);
   if (!lv) return null;
+  const typeLabel = { L1: "GOAL", L2: "STRATEGY", L3: "TACTIC" }[orgLevel] || "";
   return (
-    <span className="inline-flex items-center gap-1 font-black rounded-full"
-      style={{ fontSize: 10, padding: "3px 9px", backgroundColor: lv.color, color: "white", letterSpacing: "0.05em" }}>
-      <span style={{ fontSize: 8 }}>{lv.icon}</span>{lv.short}
+    <span className="inline-flex items-center gap-1.5 font-black rounded-full"
+      style={{ fontSize: 11, padding: "4px 11px", backgroundColor: lv.color, color: "white", letterSpacing: "0.05em" }}>
+      <span style={{ fontSize: 9 }}>{lv.icon}</span>{lv.short}
+      <span style={{ opacity: 0.7, fontSize: 9, letterSpacing: "0.08em" }}>· {typeLabel}</span>
     </span>
   );
 }
@@ -1413,8 +1415,8 @@ function L3Card({ goal, members, onGoalClick, onAdd, canEdit }) {
       <div className="p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: ORG_LEVELS[2].color, fontSize: 9 }}>L3 Tactic</span>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <OrgLevelBadge orgLevel="L3" />
               {status && <StatusDot status={status} size={8} />}
             </div>
             <div className="text-xs font-bold leading-snug" style={{ color: E3.navy }}>{goal.title}</div>
@@ -1468,9 +1470,8 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
         <div className="p-4" onClick={() => onGoalClick(goal)}>
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                <span className="text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: ORG_LEVELS[1].color, fontSize: 9 }}>L2 Goal</span>
+              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                <OrgLevelBadge orgLevel="L2" />
                 {status && <StatusDot status={status} size={9} />}
                 {status && <span className="text-xs font-bold" style={{ color: STATUS_CONFIG[status].color, fontSize: 9 }}>{STATUS_CONFIG[status].label}</span>}
               </div>
@@ -1584,8 +1585,11 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
-                style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>L1 Goal</span>
+              <span className="inline-flex items-center gap-1.5 font-black rounded-full"
+                style={{ fontSize: 11, padding: "4px 11px", backgroundColor: "rgba(255,255,255,0.18)", color: "white", letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: 9 }}>◆</span>L1
+                <span style={{ opacity: 0.75, fontSize: 9, letterSpacing: "0.08em" }}>· GOAL</span>
+              </span>
               {status && <StatusDot status={status} size={10} />}
               {status && <span className="text-xs font-bold" style={{ color: STATUS_CONFIG[status].dot }}>{STATUS_CONFIG[status].label}</span>}
             </div>
