@@ -19,9 +19,9 @@ const E3 = {
 };
 
 const ORG_LEVELS = [
-  { id: "L1", label: "L1 – Leadership Team", short: "L1", desc: "Executive leadership setting organizational direction", color: E3.navy },
-  { id: "L2", label: "L2 – Divisions / Functional Heads", short: "L2", desc: "Sales, Marketing, Operations, Regional Heads", color: "#2a5cb8" },
-  { id: "L3", label: "L3 – Departments", short: "L3", desc: "Regional sales, product teams, logistics, quality assurance", color: "#4a7fd4" },
+  { id: "L1", label: "L1 – Leadership Team", short: "L1", desc: "Executive leadership setting organizational direction", color: "#1a2d5a", icon: "◆" },
+  { id: "L2", label: "L2 – Divisions / Functional Heads", short: "L2", desc: "Sales, Marketing, Operations, Regional Heads", color: "#0d9488", icon: "▲" },
+  { id: "L3", label: "L3 – Departments", short: "L3", desc: "Regional sales, product teams, logistics, quality assurance", color: "#7c3aed", icon: "●" },
 ];
 
 const ITEM_TYPES = ["Goal", "Strategy", "Tactic"];
@@ -356,7 +356,6 @@ function parseGoalsCSV(text, members) {
   };
 
   const VALID_LEVELS = ["L1", "L2", "L3"];
-  const VALID_CASCADES = ["core", "flank"];
   const VALID_TYPES = ["Goal", "Strategy", "Tactic"];
 
   return lines.slice(1).map(line => {
@@ -367,8 +366,6 @@ function parseGoalsCSV(text, members) {
     const typeForLevel = { L1: "Goal", L2: "Strategy", L3: "Tactic" };
     const rawType = col(row, "type");
     const type = VALID_TYPES.includes(rawType) ? rawType : typeForLevel[orgLevel];
-    const rawCascade = col(row, "cascade").toLowerCase();
-    const cascade = VALID_CASCADES.includes(rawCascade) ? rawCascade : "core";
     const rawStrategies = col(row, "strategiessemicolonseparated", "strategies", "strategiessemicolonsep", "strategy");
     const strategies = rawStrategies
       ? rawStrategies.split(";").map(s => s.trim()).filter(Boolean).map(text => ({
@@ -379,7 +376,6 @@ function parseGoalsCSV(text, members) {
       title: col(row, "title", "goalname", "name", "goal"),
       orgLevel,
       type,
-      cascade,
       owner: matchMember(col(row, "owner", "ownername", "assignedto", "assignee")),
       dueDate: col(row, "duedate", "due", "date"),
       metric: col(row, "metric", "measure", "kpi"),
@@ -389,10 +385,10 @@ function parseGoalsCSV(text, members) {
   }).filter(r => r && r.title);
 }
 
-const CSV_TEMPLATE_HEADERS = "Title,Org Level,Type,Cascade,Owner,Due Date,Metric,Description,Strategies (semicolon-separated)";
-const CSV_TEMPLATE_EXAMPLE = `"Grow Revenue to $10M",L1,Goal,core,"Jane Smith",2025-12-31,"Revenue ($M)","Achieve top-line growth","Expand enterprise sales;Launch new product line"
-"Expand Enterprise Sales",L2,Strategy,core,"Bob Jones",2025-12-31,"# Enterprise deals","Win new enterprise accounts",""
-"Launch New Product Line",L2,Strategy,flank,"Sarah Kim",2025-12-31,"# Products launched","New product GTM",""`;
+const CSV_TEMPLATE_HEADERS = "Title,Org Level,Type,Owner,Due Date,Metric,Description,Strategies (semicolon-separated)";
+const CSV_TEMPLATE_EXAMPLE = `"Grow Revenue to $10M",L1,Goal,"Jane Smith",2025-12-31,"Revenue ($M)","Achieve top-line growth","Expand enterprise sales;Launch new product line"
+"Expand Enterprise Sales",L2,Strategy,"Bob Jones",2025-12-31,"# Enterprise deals","Win new enterprise accounts",""
+"Launch New Product Line",L2,Strategy,"Sarah Kim",2025-12-31,"# Products launched","New product GTM",""`;
 
 function downloadCSVTemplate() {
   const csv = [CSV_TEMPLATE_HEADERS, CSV_TEMPLATE_EXAMPLE].join("\n");
@@ -434,24 +430,14 @@ function StatusDot({ status, size = 14, onClick, interactive }) {
   return <div style={base} />;
 }
 
-function CascadeBadge({ cascade }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded font-bold uppercase tracking-widest"
-      style={{ fontSize: 9, padding: "2px 7px",
-        backgroundColor: cascade === "core" ? E3.navy : "#e5e7eb",
-        color: cascade === "core" ? "white" : E3.muted }}>
-      {cascade === "core" ? "● CORE" : "○ FLANK"}
-    </span>
-  );
-}
 
 function OrgLevelBadge({ orgLevel }) {
   const lv = ORG_LEVELS.find(l => l.id === orgLevel);
   if (!lv) return null;
   return (
-    <span className="inline-flex items-center font-black rounded"
-      style={{ fontSize: 10, padding: "2px 7px", backgroundColor: `${lv.color}18`, color: lv.color, letterSpacing: "0.04em" }}>
-      {lv.short}
+    <span className="inline-flex items-center gap-1 font-black rounded-full"
+      style={{ fontSize: 10, padding: "3px 9px", backgroundColor: lv.color, color: "white", letterSpacing: "0.05em" }}>
+      <span style={{ fontSize: 8 }}>{lv.icon}</span>{lv.short}
     </span>
   );
 }
@@ -533,7 +519,6 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
     description: goal?.description || "",
     orgLevel: goal?.orgLevel || defaultOrgLevel || "L1",
     type: goal?.type || "Goal",
-    cascade: goal?.cascade || "core",
     owner: goal?.owner || members[0]?.id || "",
     dueDate: goal?.dueDate || "",
     strategies: goal?.strategies?.length
@@ -560,8 +545,8 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
 
   return (
     <div className="space-y-4">
-      {/* Level / Type / Cascade */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Level / Type */}
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
           <select className={inputCls} style={is} value={form.orgLevel}
@@ -573,13 +558,6 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
           <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Type</label>
           <select className={inputCls} style={is} value={form.type} onChange={e => set("type", e.target.value)}>
             {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Cascade</label>
-          <select className={inputCls} style={is} value={form.cascade} onChange={e => set("cascade", e.target.value)}>
-            <option value="core">Core</option>
-            <option value="flank">Flank</option>
           </select>
         </div>
       </div>
@@ -754,7 +732,6 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
             <OrgLevelBadge orgLevel={goal.orgLevel} />
             <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded"
               style={{ backgroundColor: E3.accentLight, color: E3.accent }}>{goal.type}</span>
-            <CascadeBadge cascade={goal.cascade} />
           </div>
           <h2 className="text-xl font-black leading-snug mb-2" style={{ color: E3.navy }}>{goal.title}</h2>
           {goal.metric && (
@@ -946,7 +923,7 @@ const EMPTY_SCORECARD = Object.fromEntries(MONTHS.map(m => [m, null]));
 function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onClose }) {
   const [form, setForm] = useState({
     title: "", metric: "", description: "",
-    orgLevel: "L1", type: "Goal", cascade: "core",
+    orgLevel: "L1", type: "Goal",
     owner: selectedOwnerId || members[0]?.id || "",
     dueDate: "",
   });
@@ -1002,8 +979,8 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
           </div>
         </div>
 
-        {/* Level / Type / Cascade */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Level / Type */}
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
             <select className={inputCls} style={is} value={form.orgLevel}
@@ -1015,13 +992,6 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
             <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Type</label>
             <select className={inputCls} style={is} value={form.type} onChange={e => set("type", e.target.value)}>
               {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Cascade</label>
-            <select className={inputCls} style={is} value={form.cascade} onChange={e => set("cascade", e.target.value)}>
-              <option value="core">Core</option>
-              <option value="flank">Flank</option>
             </select>
           </div>
         </div>
@@ -1329,7 +1299,6 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
-                          <CascadeBadge cascade={goal.cascade} />
                           <span className="font-semibold text-sm" style={{ color: E3.navy }}>{goal.title}</span>
                         </div>
                         {goal.metric && (
@@ -1404,7 +1373,6 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
                   className="flex items-center justify-between px-6 py-3.5 cursor-pointer hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
                     <OrgLevelBadge orgLevel={goal.orgLevel} />
-                    <CascadeBadge cascade={goal.cascade} />
                     <span className="text-sm font-semibold truncate" style={{ color: E3.navy }}>{goal.title}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-4">
@@ -1447,7 +1415,6 @@ function L3Card({ goal, members, onGoalClick, onAdd, canEdit }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: ORG_LEVELS[2].color, fontSize: 9 }}>L3 Tactic</span>
-              <CascadeBadge cascade={goal.cascade} />
               {status && <StatusDot status={status} size={8} />}
             </div>
             <div className="text-xs font-bold leading-snug" style={{ color: E3.navy }}>{goal.title}</div>
@@ -1504,7 +1471,6 @@ function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
               <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                 <span className="text-xs font-semibold uppercase tracking-wider"
                   style={{ color: ORG_LEVELS[1].color, fontSize: 9 }}>L2 Goal</span>
-                <CascadeBadge cascade={goal.cascade} />
                 {status && <StatusDot status={status} size={9} />}
                 {status && <span className="text-xs font-bold" style={{ color: STATUS_CONFIG[status].color, fontSize: 9 }}>{STATUS_CONFIG[status].label}</span>}
               </div>
@@ -1620,7 +1586,6 @@ function L1Block({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
                 style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>L1 Goal</span>
-              <CascadeBadge cascade={goal.cascade} />
               {status && <StatusDot status={status} size={10} />}
               {status && <span className="text-xs font-bold" style={{ color: STATUS_CONFIG[status].dot }}>{STATUS_CONFIG[status].label}</span>}
             </div>
@@ -1810,7 +1775,6 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
               className="bg-white rounded-xl border mb-2 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors flex items-center gap-3"
               style={{ borderColor: E3.border }}>
               <OrgLevelBadge orgLevel={g.orgLevel} />
-              <CascadeBadge cascade={g.cascade} />
               <span className="text-sm font-semibold flex-1" style={{ color: E3.navy }}>{g.title}</span>
               {getGoalStatus(g) && <StatusDot status={getGoalStatus(g)} size={10} />}
             </div>
@@ -1932,10 +1896,10 @@ function ChartsView({ goals, company }) {
     return { name: lv.short, green, yellow, red, total: lg.length };
   });
 
-  const coreVsFlank = [
-    { name: "Core", value: cg.filter(g => g.cascade === "core").length, color: E3.navy },
-    { name: "Flank", value: cg.filter(g => g.cascade === "flank").length, color: E3.accent },
-  ];
+  const goalsByLevel = ORG_LEVELS.map(lv => ({
+    ...lv,
+    count: cg.filter(g => g.orgLevel === lv.id).length,
+  }));
 
   // Build REAL trend from actual scorecard data
   const trend = useMemo(() => {
@@ -1972,27 +1936,30 @@ function ChartsView({ goals, company }) {
           </ResponsiveContainer>
         </div>
         <div className={card} style={{ borderColor: E3.border }}>
-          <div className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: E3.navy }}>Core vs. Flank Goals</div>
-          <div className="flex items-center gap-6">
-            <ResponsiveContainer width={150} height={150}>
-              <PieChart>
-                <Pie data={coreVsFlank} cx="50%" cy="50%" innerRadius={42} outerRadius={65} dataKey="value" paddingAngle={3}>
-                  {coreVsFlank.map((d) => <Cell key={d.name} fill={d.color} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-4">
-              {coreVsFlank.map(d => (
-                <div key={d.name}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="text-sm font-black" style={{ color: E3.navy }}>{d.name}</span>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: E3.navy }}>Goals by Org Level</div>
+          <div className="space-y-4 mt-2">
+            {goalsByLevel.map(lv => {
+              const pct = cg.length ? Math.round(lv.count / cg.length * 100) : 0;
+              return (
+                <div key={lv.id}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 font-black rounded-full text-white"
+                        style={{ fontSize: 10, padding: "3px 9px", backgroundColor: lv.color }}>
+                        <span style={{ fontSize: 8 }}>{lv.icon}</span>{lv.short}
+                      </span>
+                      <span className="text-xs font-semibold" style={{ color: E3.muted }}>{lv.label.split("–")[1]?.trim()}</span>
+                    </div>
+                    <span className="text-sm font-black" style={{ color: lv.color }}>{lv.count}</span>
                   </div>
-                  <div className="text-2xl font-black" style={{ color: d.color }}>{d.value}</div>
-                  <div className="text-xs" style={{ color: E3.muted }}>{d.name === "Core" ? "Company-wide priority" : "Diversified approach"}</div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: E3.silver }}>
+                    <div className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: lv.color }} />
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: E3.muted }}>{pct}% of all goals</div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -2074,7 +2041,6 @@ function MeetingView({ goals, company, members }) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <OrgLevelBadge orgLevel={g.orgLevel} />
-                      <CascadeBadge cascade={g.cascade} />
                       <StatusDot status={getGoalStatus(g)} size={10} />
                       <span className="text-xs font-bold" style={{ color: STATUS_CONFIG[getGoalStatus(g)]?.color }}>
                         {STATUS_CONFIG[getGoalStatus(g)]?.label}
@@ -2561,7 +2527,7 @@ function ImportGoalsModal({ members, onImport, onClose }) {
               <table className="w-full text-xs">
                 <thead className="sticky top-0" style={{ backgroundColor: E3.silver }}>
                   <tr>
-                    {["Title", "Level", "Cascade", "Owner", "Metric", "Strategies"].map(h => (
+                    {["Title", "Level", "Owner", "Metric", "Strategies"].map(h => (
                       <th key={h} className="px-3 py-2 text-left font-black" style={{ color: E3.navy }}>{h}</th>
                     ))}
                   </tr>
@@ -2575,7 +2541,6 @@ function ImportGoalsModal({ members, onImport, onClose }) {
                         <td className="px-3 py-2">
                           <span className="px-1.5 py-0.5 rounded text-white font-black" style={{ backgroundColor: levelColor[row.orgLevel] || E3.navy, fontSize: 10 }}>{row.orgLevel}</span>
                         </td>
-                        <td className="px-3 py-2 capitalize" style={{ color: E3.muted }}>{row.cascade}</td>
                         <td className="px-3 py-2" style={{ color: E3.muted }}>{ownerName}</td>
                         <td className="px-3 py-2 max-w-xs truncate" style={{ color: E3.muted }}>{row.metric || "—"}</td>
                         <td className="px-3 py-2" style={{ color: E3.muted }}>{row.strategies.length > 0 ? `${row.strategies.length} strategies` : "—"}</td>
@@ -3009,7 +2974,6 @@ export default function E3LevelOrderPlanning() {
       companyId: activeCompanyId,
       orgLevel: row.orgLevel,
       type: row.type,
-      cascade: row.cascade,
       title: row.title,
       metric: row.metric,
       description: row.description,
@@ -3086,7 +3050,6 @@ export default function E3LevelOrderPlanning() {
               companyId: form.companyId,
               orgLevel: childLevel,
               type: typeForLevel[childLevel],
-              cascade: form.cascade,
               title: s.text,
               metric: "",
               description: `Cascaded from ${form.orgLevel} goal: ${form.title}`,
@@ -3115,7 +3078,6 @@ export default function E3LevelOrderPlanning() {
             companyId: form.companyId,
             orgLevel: childLevel,
             type: typeForLevel[childLevel],
-            cascade: form.cascade,
             title: s.text,
             metric: "",
             description: `Cascaded from ${form.orgLevel} goal: ${form.title}`,
@@ -3422,7 +3384,7 @@ export default function E3LevelOrderPlanning() {
       {modal?.type === "detail" && (() => {
         const liveGoal = data.goals.find(g => g.id === modal.goal?.id) || modal.goal;
         return (
-          <Modal title="Goal Detail" subtitle={`${liveGoal.orgLevel} · ${liveGoal.type} · ${liveGoal.cascade === "core" ? "Core" : "Flank"}`} onClose={closeModal} wide>
+          <Modal title="Goal Detail" subtitle={`${liveGoal.orgLevel} · ${liveGoal.type}`} onClose={closeModal} wide>
             <GoalDetail goal={liveGoal} allGoals={data.goals} members={members} currentUser={currentUser}
               onEdit={() => setModal({ type: "edit", goal: liveGoal })}
               onDelete={() => handleDeleteGoal(liveGoal.id)}
