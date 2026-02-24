@@ -24,7 +24,7 @@ const ORG_LEVELS = [
   { id: "L3", label: "L3 – Departments", short: "L3", desc: "Regional sales, product teams, logistics, quality assurance", color: "#7c3aed", icon: "●" },
 ];
 
-const ITEM_TYPES = ["Goal", "Strategy", "Tactic"];
+const ITEM_TYPES = ["Goal"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const STATUS_CYCLE = [null, "green", "yellow", "red"]; // click cycles through
 
@@ -113,7 +113,7 @@ const SEED = {
 
     // ── L2 GOALS — Cascade from g1 (Drive $50M EBITDA) ───────────────────────
     {
-      id: "g4", companyId: "c1", orgLevel: "L2", type: "Strategy",
+      id: "g4", companyId: "c1", orgLevel: "L2", type: "Goal",
       title: "Generate $25M EBITDA from Mexico Operations",
       metric: "$25M EBITDA contribution from MX by Dec 31",
       description: "Mexico is the primary growth engine. Expand revenue, tighten cost structure, and scale the enterprise segment.",
@@ -129,7 +129,7 @@ const SEED = {
       comments: [{ id: "cm2", userId: "u2", text: "Pipeline for enterprise deals is strong — 18 in late stage as of Feb.", date: "2026-02-10" }]
     },
     {
-      id: "g5", companyId: "c1", orgLevel: "L2", type: "Strategy",
+      id: "g5", companyId: "c1", orgLevel: "L2", type: "Goal",
       title: "Generate $15M EBITDA from Dominican Republic",
       metric: "$15M EBITDA contribution from DR by Dec 31",
       description: "Accelerate growth in the Dominican market through market penetration and operational improvements.",
@@ -145,7 +145,7 @@ const SEED = {
       comments: [{ id: "cm3", userId: "u3", text: "Government renewal process slower than expected — escalating to William.", date: "2026-02-08" }]
     },
     {
-      id: "g6", companyId: "c1", orgLevel: "L2", type: "Strategy",
+      id: "g6", companyId: "c1", orgLevel: "L2", type: "Goal",
       title: "Generate $10M EBITDA from Colombia Operations",
       metric: "$10M EBITDA contribution from COL by Dec 31",
       description: "Colombia is the emerging market. Focus on customer acquisition and operational foundation.",
@@ -163,7 +163,7 @@ const SEED = {
 
     // ── L2 GOALS — Cascade from g2 (Customer Retention) ──────────────────────
     {
-      id: "g7", companyId: "c1", orgLevel: "L2", type: "Strategy",
+      id: "g7", companyId: "c1", orgLevel: "L2", type: "Goal",
       title: "Drive Mexico Customer Retention to 97%",
       metric: "97% retention rate on rolling 12-month cohort",
       description: "Mexico retention is core to EBITDA stability. Proactive account management is the lever.",
@@ -179,7 +179,7 @@ const SEED = {
       comments: []
     },
     {
-      id: "g8", companyId: "c1", orgLevel: "L2", type: "Strategy",
+      id: "g8", companyId: "c1", orgLevel: "L2", type: "Goal",
       title: "Drive Dominican Republic Customer Retention to 95%",
       metric: "95% retention rate on rolling 12-month cohort",
       description: "Reduce churn driven by service quality gaps and slow issue resolution.",
@@ -195,7 +195,7 @@ const SEED = {
       comments: [{ id: "cm4", userId: "u3", text: "Two large accounts at risk — escalated to retention team.", date: "2026-02-14" }]
     },
     {
-      id: "g9", companyId: "c1", orgLevel: "L2", type: "Strategy",
+      id: "g9", companyId: "c1", orgLevel: "L2", type: "Goal",
       title: "Drive Colombia Customer Retention to 93%",
       metric: "93% retention rate on rolling 12-month cohort",
       description: "As a newer market, Colombia needs strong onboarding to anchor retention.",
@@ -213,7 +213,7 @@ const SEED = {
 
     // ── L3 GOALS — Cascade from g4 (Mexico EBITDA strategies) ────────────────
     {
-      id: "g10", companyId: "c1", orgLevel: "L3", type: "Tactic",
+      id: "g10", companyId: "c1", orgLevel: "L3", type: "Goal",
       title: "Close 40 New Enterprise Contracts in H1",
       metric: "40 signed contracts >$100K by June 30",
       description: "Drive enterprise pipeline velocity through focused sales execution.",
@@ -229,7 +229,7 @@ const SEED = {
       comments: []
     },
     {
-      id: "g11", companyId: "c1", orgLevel: "L3", type: "Tactic",
+      id: "g11", companyId: "c1", orgLevel: "L3", type: "Goal",
       title: "Reduce Mexico Operating Cost Ratio to 55%",
       metric: "OpEx as % of revenue ≤ 55% by Q4",
       description: "Improve unit economics by renegotiating vendor contracts and automating manual processes.",
@@ -356,14 +356,14 @@ function parseGoalsCSV(text, members) {
   };
 
   const VALID_LEVELS = ["L1", "L2", "L3"];
-  const VALID_TYPES = ["Goal", "Strategy", "Tactic"];
+  const VALID_TYPES = ["Goal"];
 
   return lines.slice(1).map(line => {
     const row = parseCSVLine(line);
     if (row.every(v => !v.trim())) return null;
     const rawLevel = col(row, "orglevel", "level", "lvl").toUpperCase();
     const orgLevel = VALID_LEVELS.includes(rawLevel) ? rawLevel : "L1";
-    const typeForLevel = { L1: "Goal", L2: "Strategy", L3: "Tactic" };
+    const typeForLevel = { L1: "Goal", L2: "Goal", L3: "Goal" };
     const rawType = col(row, "type");
     const type = VALID_TYPES.includes(rawType) ? rawType : typeForLevel[orgLevel];
     const rawStrategies = col(row, "strategiessemicolonseparated", "strategies", "strategiessemicolonsep", "strategy");
@@ -434,7 +434,7 @@ function StatusDot({ status, size = 14, onClick, interactive }) {
 function OrgLevelBadge({ orgLevel }) {
   const lv = ORG_LEVELS.find(l => l.id === orgLevel);
   if (!lv) return null;
-  const typeLabel = { L1: "GOAL", L2: "STRATEGY", L3: "TACTIC" }[orgLevel] || "";
+  const typeLabel = "GOAL";
   return (
     <span className="inline-flex items-center gap-1.5 font-black rounded-full"
       style={{ fontSize: 11, padding: "4px 11px", backgroundColor: lv.color, color: "white", letterSpacing: "0.05em" }}>
@@ -513,7 +513,7 @@ function ConfirmModal({ title, message, confirmLabel = "Delete", onConfirm, onCa
 // When saving with cascadeStrategies=true, caller auto-creates child goals from strategies
 function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave, onClose }) {
   const nextLevel = { L1: "L2", L2: "L3", L3: null };
-  const typeForLevel = { L1: "Goal", L2: "Strategy", L3: "Tactic" };
+  const typeForLevel = { L1: "Goal", L2: "Goal", L3: "Goal" };
 
   const [form, setForm] = useState({
     title: goal?.title || "",
@@ -547,21 +547,13 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
 
   return (
     <div className="space-y-4">
-      {/* Level / Type */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
-          <select className={inputCls} style={is} value={form.orgLevel}
-            onChange={e => { set("orgLevel", e.target.value); set("type", typeForLevel[e.target.value]); }}>
-            {ORG_LEVELS.map(l => <option key={l.id} value={l.id}>{l.short}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Type</label>
-          <select className={inputCls} style={is} value={form.type} onChange={e => set("type", e.target.value)}>
-            {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
-          </select>
-        </div>
+      {/* Level */}
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
+        <select className={inputCls} style={is} value={form.orgLevel}
+          onChange={e => { set("orgLevel", e.target.value); set("type", typeForLevel[e.target.value]); }}>
+          {ORG_LEVELS.map(l => <option key={l.id} value={l.id}>{l.short} – {l.label.split("–")[1]?.trim()}</option>)}
+        </select>
       </div>
 
       {/* Goal title */}
@@ -600,15 +592,16 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
       </div>
 
       {/* Strategies — with owner per strategy */}
-      {childLevel && (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: E3.border }}>
+      <div className="rounded-xl border overflow-hidden" style={{ borderColor: E3.border }}>
           <div className="flex items-center justify-between px-4 py-3" style={{ backgroundColor: E3.silver }}>
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: E3.navy }}>
-                Strategies → These become {childLevel} Goals
+                {childLevel ? `Strategies → These become ${childLevel} Goals` : "Strategies & Tactics — Execution Plan"}
               </div>
               <div className="text-xs mt-0.5" style={{ color: E3.muted }}>
-                Each strategy cascades down as a {childLevel} goal assigned to the accountable owner
+                {childLevel
+                  ? `Each strategy cascades down as a ${childLevel} goal assigned to the accountable owner`
+                  : "Concrete actions and tactics to achieve this L3 goal"}
               </div>
             </div>
             <button onClick={addStrat} className="flex items-center gap-1 text-xs font-black px-2.5 py-1.5 rounded-lg text-white"
@@ -662,7 +655,7 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
             ))}
           </div>
 
-          {validStrategies.length > 0 && (
+          {validStrategies.length > 0 && childLevel && (
             <div className="px-4 py-3 border-t flex items-center gap-2" style={{ borderColor: E3.border, backgroundColor: "#f0fdf4" }}>
               <ChevronRight size={13} style={{ color: "#059669" }} />
               <span className="text-xs font-bold" style={{ color: "#059669" }}>
@@ -671,7 +664,6 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
             </div>
           )}
         </div>
-      )}
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">
@@ -732,8 +724,10 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <OrgLevelBadge orgLevel={goal.orgLevel} />
-            <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-              style={{ backgroundColor: E3.accentLight, color: E3.accent }}>{goal.type}</span>
+            {goal.orgLevel === "L3" && (
+              <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                style={{ backgroundColor: E3.accentLight, color: E3.accent }}>Drives Tactics</span>
+            )}
           </div>
           <h2 className="text-xl font-black leading-snug mb-2" style={{ color: E3.navy }}>{goal.title}</h2>
           {goal.metric && (
@@ -779,11 +773,13 @@ function GoalDetail({ goal, allGoals, members, currentUser, onEdit, onDelete, on
         <div className="rounded-xl border overflow-hidden" style={{ borderColor: E3.border }}>
           <div className="px-4 py-3 flex items-center gap-2" style={{ backgroundColor: E3.silver }}>
             <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: E3.navy }}>
-              Strategies → Cascade Down
+              {goal.orgLevel === "L3" ? "Strategies & Tactics — Execution Plan" : `Strategies → Cascade into ${goal.orgLevel === "L1" ? "L2" : "L3"} Goals`}
             </div>
-            <span className="text-xs ml-auto" style={{ color: E3.muted }}>
-              {goal.strategies.filter(s => (typeof s === "string" ? null : s.childGoalId)).length} of {goal.strategies.length} linked to child goals
-            </span>
+            {goal.orgLevel !== "L3" && (
+              <span className="text-xs ml-auto" style={{ color: E3.muted }}>
+                {goal.strategies.filter(s => (typeof s === "string" ? null : s.childGoalId)).length} of {goal.strategies.length} linked to child goals
+              </span>
+            )}
           </div>
           <div className="divide-y" style={{ borderColor: E3.border }}>
             {goal.strategies.map((s, i) => {
@@ -930,7 +926,7 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
     dueDate: "",
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const typeForLevel = { L1: "Goal", L2: "Strategy", L3: "Tactic" };
+  const typeForLevel = { L1: "Goal", L2: "Goal", L3: "Goal" };
   const inputCls = "w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-all";
   const is = { borderColor: E3.border, color: E3.navy };
 
@@ -981,21 +977,13 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
           </div>
         </div>
 
-        {/* Level / Type */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
-            <select className={inputCls} style={is} value={form.orgLevel}
-              onChange={e => { set("orgLevel", e.target.value); set("type", typeForLevel[e.target.value]); }}>
-              {ORG_LEVELS.map(l => <option key={l.id} value={l.id}>{l.short} – {l.label.split("–")[1]?.trim()}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Type</label>
-            <select className={inputCls} style={is} value={form.type} onChange={e => set("type", e.target.value)}>
-              {ITEM_TYPES.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
+        {/* Level */}
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: E3.muted }}>Org Level</label>
+          <select className={inputCls} style={is} value={form.orgLevel}
+            onChange={e => { set("orgLevel", e.target.value); set("type", typeForLevel[e.target.value]); }}>
+            {ORG_LEVELS.map(l => <option key={l.id} value={l.id}>{l.short} – {l.label.split("–")[1]?.trim()}</option>)}
+          </select>
         </div>
 
         {/* Title */}
@@ -1441,7 +1429,7 @@ function L3Card({ goal, members, onGoalClick, onAdd, canEdit }) {
   );
 }
 
-// L2 Strategy card — shows the strategy card + its L3 children below
+// L2 Goal card — shows the L2 goal + its L3 child goals below
 function L2Card({ goal, allGoals, members, onGoalClick, onAdd, canEdit }) {
   const [expanded, setExpanded] = useState(true);
   const owner = members.find(m => m.id === goal.owner);
@@ -1739,7 +1727,7 @@ function CascadeView({ goals, company, members, onGoalClick, onAdd, canEdit }) {
         </div>
         <div className="px-5 py-2.5 flex items-center justify-between gap-4" style={{ backgroundColor: E3.silver }}>
           <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: E3.muted }}>
-            Level Order Planning · L1 Goals cascade into L2 Strategies which cascade into L3 Tactics
+            Level Order Planning · L1 Strategies cascade into L2 Goals · L2 Strategies cascade into L3 Goals · L3 Goals drive Tactics
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <div className="flex items-center gap-2 border rounded-lg px-3 py-1.5 bg-white" style={{ borderColor: E3.border }}>
@@ -3021,7 +3009,7 @@ export default function E3LevelOrderPlanning() {
 
   const handleSaveGoal = (form, addAnother = false) => {
     const nextLevel = { L1: "L2", L2: "L3", L3: null };
-    const typeForLevel = { L1: "Goal", L2: "Strategy", L3: "Tactic" };
+    const typeForLevel = { L1: "Goal", L2: "Goal", L3: "Goal" };
     const emptyScorecard = Object.fromEntries(MONTHS.map(m => [m, null]));
 
     setData(d => {
@@ -3397,7 +3385,7 @@ export default function E3LevelOrderPlanning() {
         );
       })()}
       {(modal?.type === "add" || modal?.type === "edit") && (
-        <Modal title={modal.type === "edit" ? "Edit Goal" : "Add New Goal"} subtitle="Level Order Planning · Goal → Strategy → Tactic" onClose={closeModal} wide>
+        <Modal title={modal.type === "edit" ? "Edit Goal" : "Add New Goal"} subtitle="Level Order Planning · L1 Goal → L2 Goal → L3 Goal" onClose={closeModal} wide>
           <GoalForm goal={modal.goal} companyId={activeCompanyId} members={members}
             parentId={modal.parentId} defaultOrgLevel={modal.orgLevel}
             onSave={handleSaveGoal} onClose={closeModal} />
