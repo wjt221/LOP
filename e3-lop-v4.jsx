@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Component } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -33,6 +33,33 @@ const STATUS_CONFIG = {
   yellow: { label: "At Risk",   color: "#b45309", bg: "#fef3c7", dot: "#f59e0b" },
   red:    { label: "Off Track", color: "#dc2626", bg: "#fee2e2", dot: "#dc2626" },
 };
+
+// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#0f1f47", padding: 32 }}>
+          <div style={{ maxWidth: 560, backgroundColor: "white", borderRadius: 16, padding: 32 }}>
+            <div style={{ fontWeight: 900, fontSize: 18, color: "#1a2d5a", marginBottom: 8 }}>Something went wrong</div>
+            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>The app hit an unexpected error. Try a hard refresh (Ctrl+Shift+R). If it persists, clear localStorage in DevTools → Application → Storage → Clear Site Data.</div>
+            <pre style={{ fontSize: 11, backgroundColor: "#f8fafc", borderRadius: 8, padding: 12, overflow: "auto", color: "#dc2626", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              {this.state.error?.message}
+              {"\n\n"}
+              {this.state.error?.stack}
+            </pre>
+            <button onClick={() => window.location.reload()} style={{ marginTop: 16, padding: "8px 20px", backgroundColor: "#1a2d5a", color: "white", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+              Reload App
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
 // Each goal's `strategies` array stores objects: { text, ownerId, childGoalId }
@@ -2969,7 +2996,7 @@ function AddCompanyForm({ onSave, onClose }) {
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
-export default function E3LevelOrderPlanning() {
+function E3LevelOrderPlanningInner() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeCompanyId, setActiveCompanyId] = useState("c1");
@@ -3009,14 +3036,17 @@ export default function E3LevelOrderPlanning() {
     saveUser(newUser);
     startSession();
     setAuthenticated(true);
-    setData(d => d ? {
-      ...d,
-      currentUser: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
-      companies: d.companies.map(c => ({
-        ...c,
-        members: c.members.map(m => m.id === newUser.id ? { ...m, name: newUser.name, email: newUser.email } : m),
-      })),
-    } : null);
+    setData(d => {
+      const base = d || SEED;
+      return {
+        ...base,
+        currentUser: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
+        companies: base.companies.map(c => ({
+          ...c,
+          members: c.members.map(m => m.id === newUser.id ? { ...m, name: newUser.name, email: newUser.email } : m),
+        })),
+      };
+    });
   };
 
   // Called by LoginScreen after password verified on returning session
@@ -3306,7 +3336,7 @@ export default function E3LevelOrderPlanning() {
     closeModal();
   };
 
-  const isLoading = !userLoaded || loading;
+  const isLoading = !userLoaded || loading || !data;
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: E3.navy }}>
       <div className="text-center">
@@ -3540,4 +3570,8 @@ export default function E3LevelOrderPlanning() {
       )}
     </div>
   );
+}
+
+export default function E3LevelOrderPlanning() {
+  return <ErrorBoundary><E3LevelOrderPlanningInner /></ErrorBoundary>;
 }
