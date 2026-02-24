@@ -1062,12 +1062,17 @@ function AddScorecardItemForm({ members, companyId, selectedOwnerId, onSave, onC
   );
 }
 
-function DashboardView({ goals, company, members, currentUser, onGoalClick, onAddGoal, onOpenGoalModal, onOpenImportModal }) {
+function DashboardView({ goals, company, members, currentUser, onGoalClick, onAddGoal, onOpenGoalModal, onOpenImportModal, onBulkDelete, onBulkReassign }) {
   const cg = goals.filter(g => g.companyId === company.id);
   const [selectedMemberId, setSelectedMemberId] = useState(
     members.find(m => m.id === currentUser?.id)?.id || members[0]?.id
   );
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedGoalIds, setSelectedGoalIds] = useState(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [reassignMemberId, setReassignMemberId] = useState("");
+
+  useEffect(() => { setSelectedGoalIds(new Set()); setReassignMemberId(""); }, [selectedMemberId]);
 
   const currentMonthIdx = new Date().getMonth();
   const currentMonth = MONTHS[currentMonthIdx];
@@ -1086,6 +1091,16 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
 
   const isViewingOwn = selectedMemberId === currentUser?.id;
   const atRiskGoals = memberGoals.filter(g => ["yellow", "red"].includes(getGoalStatus(g)));
+
+  const allSelected = memberGoals.length > 0 && memberGoals.every(g => selectedGoalIds.has(g.id));
+  const someSelected = selectedGoalIds.size > 0;
+  const toggleGoal = (goalId) => setSelectedGoalIds(prev => {
+    const next = new Set(prev);
+    if (next.has(goalId)) next.delete(goalId); else next.add(goalId);
+    return next;
+  });
+  const toggleAll = () => setSelectedGoalIds(allSelected ? new Set() : new Set(memberGoals.map(g => g.id)));
+  const clearSelection = () => { setSelectedGoalIds(new Set()); setReassignMemberId(""); };
 
   if (cg.length === 0) {
     return (
@@ -1224,6 +1239,44 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
           </div>
         </div>
 
+        {/* Bulk action toolbar */}
+        {someSelected && (
+          <div className="px-5 py-3 border-b flex items-center gap-3 flex-wrap"
+            style={{ borderColor: E3.border, backgroundColor: E3.accentLight }}>
+            <span className="text-xs font-black" style={{ color: E3.navy }}>
+              {selectedGoalIds.size} goal{selectedGoalIds.size !== 1 ? "s" : ""} selected
+            </span>
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              <select
+                value={reassignMemberId}
+                onChange={e => setReassignMemberId(e.target.value)}
+                className="text-xs border rounded-lg px-2 py-1.5 font-semibold"
+                style={{ borderColor: E3.border, color: E3.navy, backgroundColor: "white" }}>
+                <option value="">Reassign to…</option>
+                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+              {reassignMemberId && (
+                <button
+                  onClick={() => { onBulkReassign([...selectedGoalIds], reassignMemberId); clearSelection(); }}
+                  className="text-xs px-3 py-1.5 rounded-lg font-black text-white"
+                  style={{ backgroundColor: E3.accent }}>
+                  Apply
+                </button>
+              )}
+              <button onClick={() => setConfirmBulkDelete(true)}
+                className="text-xs px-3 py-1.5 rounded-lg font-black text-white flex items-center gap-1.5"
+                style={{ backgroundColor: "#dc2626" }}>
+                <Trash2 size={11} /> Delete
+              </button>
+              <button onClick={clearSelection}
+                className="text-xs px-3 py-1.5 rounded-lg font-bold border"
+                style={{ borderColor: E3.border, color: E3.muted, backgroundColor: "white" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
         {memberGoals.length === 0 ? (
           <div className="text-center py-14">
@@ -1244,6 +1297,12 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
             <table className="w-full">
               <thead>
                 <tr style={{ backgroundColor: E3.silver }}>
+                  <th className="px-3 py-3" style={{ width: 40 }}>
+                    <input type="checkbox" checked={allSelected}
+                      ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                      onChange={toggleAll} className="cursor-pointer"
+                      style={{ accentColor: E3.accent }} />
+                  </th>
                   <th className="text-left px-5 py-3 font-black text-xs uppercase tracking-wider" style={{ color: E3.muted, minWidth: 220 }}>Goal / Strategy / Tactic</th>
                   <th className="text-left px-3 py-3 font-black text-xs uppercase tracking-wider" style={{ color: E3.muted, minWidth: 52 }}>Level</th>
                   <th className="text-left px-3 py-3 font-black text-xs uppercase tracking-wider" style={{ color: E3.muted, minWidth: 56 }}>Track%</th>
@@ -1262,7 +1321,12 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
                   return (
                     <tr key={goal.id} onClick={() => onGoalClick(goal)}
                       className="border-b cursor-pointer hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: E3.border }}>
+                      style={{ borderColor: E3.border, backgroundColor: selectedGoalIds.has(goal.id) ? E3.accentLight : undefined }}>
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" checked={selectedGoalIds.has(goal.id)}
+                          onChange={() => toggleGoal(goal.id)} className="cursor-pointer"
+                          style={{ accentColor: E3.accent }} />
+                      </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
                           <CascadeBadge cascade={goal.cascade} />
@@ -1354,6 +1418,16 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
             })}
           </div>
         </div>
+      )}
+
+      {confirmBulkDelete && (
+        <ConfirmModal
+          title={`Delete ${selectedGoalIds.size} Goal${selectedGoalIds.size !== 1 ? "s" : ""}?`}
+          message={`This will permanently delete the selected goal${selectedGoalIds.size !== 1 ? "s" : ""} and any cascaded children. This cannot be undone.`}
+          confirmLabel="Delete All"
+          onConfirm={() => { onBulkDelete([...selectedGoalIds]); clearSelection(); setConfirmBulkDelete(false); }}
+          onCancel={() => setConfirmBulkDelete(false)}
+        />
       )}
     </div>
   );
@@ -3091,6 +3165,26 @@ export default function E3LevelOrderPlanning() {
     closeModal();
   };
 
+  const handleBulkDelete = (goalIds) => {
+    setData(d => {
+      const toDelete = new Set();
+      const collectIds = (id) => {
+        toDelete.add(id);
+        d.goals.filter(g => g.parentId === id).forEach(g => collectIds(g.id));
+      };
+      goalIds.forEach(id => collectIds(id));
+      return { ...d, goals: d.goals.filter(g => !toDelete.has(g.id)) };
+    });
+  };
+
+  const handleBulkReassign = (goalIds, newOwnerId) => {
+    const idSet = new Set(goalIds);
+    setData(d => ({
+      ...d,
+      goals: d.goals.map(g => idSet.has(g.id) ? { ...g, owner: newOwnerId } : g),
+    }));
+  };
+
   const handleAddComment = (goalId, text) => {
     setData(d => ({
       ...d,
@@ -3312,7 +3406,7 @@ export default function E3LevelOrderPlanning() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
-          {activeView === "dashboard" && <DashboardView goals={data.goals} company={company} members={members} currentUser={currentUser} onGoalClick={g => setModal({ type: "detail", goal: g })} onAddGoal={handleAddGoalDirect} onOpenGoalModal={() => setModal({ type: "add", parentId: null, orgLevel: "L1" })} onOpenImportModal={() => setModal({ type: "import-goals" })} />}
+          {activeView === "dashboard" && <DashboardView goals={data.goals} company={company} members={members} currentUser={currentUser} onGoalClick={g => setModal({ type: "detail", goal: g })} onAddGoal={handleAddGoalDirect} onOpenGoalModal={() => setModal({ type: "add", parentId: null, orgLevel: "L1" })} onOpenImportModal={() => setModal({ type: "import-goals" })} onBulkDelete={handleBulkDelete} onBulkReassign={handleBulkReassign} />}
           {activeView === "cascade" && <CascadeView goals={data.goals} company={company} members={members} onGoalClick={g => setModal({ type: "detail", goal: g })} onAdd={(parentId, orgLevel) => setModal({ type: "add", parentId, orgLevel })} canEdit={canEdit} />}
           {activeView === "scorecard" && <ScorecardView goals={data.goals} company={company} members={members} onGoalClick={g => setModal({ type: "detail", goal: g })} onUpdateScorecard={handleUpdateScorecard} />}
           {activeView === "charts" && <ChartsView goals={data.goals} company={company} />}
