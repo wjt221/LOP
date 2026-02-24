@@ -628,7 +628,7 @@ function GoalForm({ goal, companyId, members, parentId, defaultOrgLevel, onSave,
                 {/* Owner for this strategy = accountable for the L2 goal */}
                 <div className="flex items-center gap-2 pl-7">
                   <span className="text-xs font-semibold uppercase tracking-wider flex-shrink-0" style={{ color: E3.muted }}>
-                    {childLevel} Owner:
+                    {childLevel ? `${childLevel} Owner` : "Owner"}:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {members.map(m => (
@@ -1039,7 +1039,7 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
   });
 
   // Build reporting groups from managerId hierarchy
-  const memberGroups = React.useMemo(() => {
+  const memberGroups = useMemo(() => {
     const q = memberSearch.toLowerCase();
     const filtered = q
       ? members.filter(m => m.name.toLowerCase().includes(q) || m.title?.toLowerCase().includes(q))
@@ -2813,7 +2813,7 @@ function ProfileForm({ user, onSave, onChangePassword, onSignOut, onClose }) {
   const [newPw,  setNewPw]  = useState("");
   const [newPw2, setNewPw2] = useState("");
   const [pwErr,  setPwErr]  = useState("");
-  const [pwBusy, setPwBusy] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const inp = "w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all";
   const is  = { borderColor: E3.border, color: E3.navy };
@@ -3009,14 +3009,19 @@ export default function E3LevelOrderPlanning() {
     saveUser(newUser);
     startSession();
     setAuthenticated(true);
-    setData(d => d ? {
-      ...d,
-      currentUser: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
-      companies: d.companies.map(c => ({
-        ...c,
-        members: c.members.map(m => m.id === newUser.id ? { ...m, name: newUser.name, email: newUser.email } : m),
-      })),
-    } : null);
+    // d may be null after a full reset; fall back to SEED so the main render
+    // always has a valid data object when authentication succeeds.
+    setData(d => {
+      const base = d || SEED;
+      return {
+        ...base,
+        currentUser: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
+        companies: base.companies.map(c => ({
+          ...c,
+          members: c.members.map(m => m.id === newUser.id ? { ...m, name: newUser.name, email: newUser.email } : m),
+        })),
+      };
+    });
   };
 
   // Called by LoginScreen after password verified on returning session
@@ -3513,7 +3518,7 @@ export default function E3LevelOrderPlanning() {
               member={modal.member}
               members={members}
               onSave={(form) => modal.member
-                ? handleUpdateOrgMember(modal.member.id, { ...form, managerId: form.managerId || modal.member.managerId || null })
+                ? handleUpdateOrgMember(modal.member.id, { ...form, managerId: form.managerId || null })
                 : handleAddOrgMember({ ...form, managerId: form.managerId || modal.managerId || null })}
               onDelete={modal.member ? handleDeleteOrgMember : null}
               onClose={closeModal} />
