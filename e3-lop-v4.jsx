@@ -1031,6 +1031,39 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
   const [selectedGoalIds, setSelectedGoalIds] = useState(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [reassignMemberId, setReassignMemberId] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+
+  const toggleGroup = (key) => setCollapsedGroups(s => {
+    const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n;
+  });
+
+  // Build reporting groups from managerId hierarchy
+  const memberGroups = React.useMemo(() => {
+    const q = memberSearch.toLowerCase();
+    const filtered = q
+      ? members.filter(m => m.name.toLowerCase().includes(q) || m.title?.toLowerCase().includes(q))
+      : members;
+
+    const map = new Map();
+    filtered.forEach(m => {
+      const key = m.managerId ?? "__root__";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(m);
+    });
+
+    // Root group first, then remaining groups sorted by manager name
+    const result = [];
+    if (map.has("__root__")) {
+      result.push({ key: "__root__", manager: null, members: map.get("__root__") });
+      map.delete("__root__");
+    }
+    map.forEach((mems, managerId) => {
+      const manager = members.find(m => m.id === managerId);
+      result.push({ key: managerId, manager, members: mems });
+    });
+    return result;
+  }, [members, memberSearch]);
 
   useEffect(() => { setSelectedGoalIds(new Set()); setReassignMemberId(""); }, [selectedMemberId]);
 
@@ -1114,44 +1147,107 @@ function DashboardView({ goals, company, members, currentUser, onGoalClick, onAd
         </div>
       </div>
 
-      {/* Member toggle — avatar pills */}
-      <div className="bg-white rounded-2xl border shadow-sm p-4" style={{ borderColor: E3.border }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: E3.muted }}>Viewing Scorecard For</div>
-          <button onClick={() => { setShowAddForm(s => !s); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-colors"
+      {/* Member selector — grouped by reporting structure */}
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: E3.border }}>
+        {/* Header row */}
+        <div className="px-4 py-3 border-b flex items-center gap-3" style={{ borderColor: E3.border }}>
+          <div className="text-xs font-semibold uppercase tracking-widest flex-shrink-0" style={{ color: E3.muted }}>Viewing Scorecard For</div>
+          <div className="flex-1 flex items-center gap-2 border rounded-lg px-2.5 py-1.5 bg-gray-50" style={{ borderColor: E3.border }}>
+            <Search size={11} style={{ color: E3.muted }} />
+            <input
+              className="flex-1 bg-transparent text-xs focus:outline-none"
+              placeholder="Search by name or title…"
+              value={memberSearch}
+              onChange={e => setMemberSearch(e.target.value)}
+              style={{ color: E3.navy }}
+            />
+            {memberSearch && <button onClick={() => setMemberSearch("")}><X size={10} style={{ color: E3.muted }} /></button>}
+          </div>
+          <button onClick={() => setShowAddForm(s => !s)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black flex-shrink-0 transition-colors"
             style={{ backgroundColor: showAddForm ? E3.navy : E3.accentLight, color: showAddForm ? "white" : E3.accent }}>
             <Plus size={12} /> {showAddForm ? "Cancel" : "Add Item"}
           </button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {members.map(m => {
-            const mGoals = cg.filter(g => g.owner === m.id);
-            const mAtRisk = mGoals.filter(g => ["yellow","red"].includes(getGoalStatus(g))).length;
-            const isSelected = m.id === selectedMemberId;
-            return (
-              <button key={m.id} onClick={() => setSelectedMemberId(m.id)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border transition-all"
-                style={{
-                  borderColor: isSelected ? E3.accent : E3.border,
-                  backgroundColor: isSelected ? E3.accentLight : "white",
-                  boxShadow: isSelected ? `0 0 0 2px ${E3.accent}22` : "none",
-                }}>
-                <Avatar name={m.name} size={7} />
-                <div className="text-left">
-                  <div className="text-xs font-black leading-tight" style={{ color: E3.navy }}>
-                    {m.name}{m.id === currentUser?.id && <span className="ml-1 font-normal" style={{ color: E3.accent }}>(you)</span>}
-                  </div>
-                  <div className="text-xs leading-tight" style={{ color: E3.muted }}>
-                    {mGoals.length} goal{mGoals.length !== 1 ? "s" : ""}
-                    {mAtRisk > 0 && <span className="ml-1 font-black" style={{ color: "#dc2626" }}>· {mAtRisk} at risk</span>}
-                  </div>
+
+        {/* Reporting groups */}
+        {memberGroups.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm" style={{ color: E3.muted }}>No members match "{memberSearch}"</div>
+        ) : (
+          <div className="divide-y" style={{ borderColor: E3.border }}>
+            {memberGroups.map(({ key, manager, members: groupMembers }) => {
+              const isCollapsed = collapsedGroups.has(key);
+              const groupLabel = manager ? `Reports to ${manager.name}` : "Leadership";
+              const groupSublabel = manager ? manager.title : "Top of org";
+              const groupAtRisk = groupMembers.filter(m =>
+                cg.filter(g => g.owner === m.id).some(g => ["yellow","red"].includes(getGoalStatus(g)))
+              ).length;
+
+              return (
+                <div key={key}>
+                  {/* Group header */}
+                  <button
+                    className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                    onClick={() => toggleGroup(key)}>
+                    {isCollapsed ? <ChevronRight size={13} style={{ color: E3.muted }} /> : <ChevronDown size={13} style={{ color: E3.muted }} />}
+                    {manager && <Avatar name={manager.name} size={5} />}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-black" style={{ color: E3.navy }}>{groupLabel}</span>
+                      <span className="text-xs ml-1.5" style={{ color: E3.muted }}>{groupSublabel}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {groupAtRisk > 0 && (
+                        <span className="text-xs font-black px-1.5 py-0.5 rounded-full"
+                          style={{ backgroundColor: "#fee2e2", color: "#dc2626" }}>
+                          {groupAtRisk} at risk
+                        </span>
+                      )}
+                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: E3.silver, color: E3.muted }}>
+                        {groupMembers.length}
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Group members */}
+                  {!isCollapsed && (
+                    <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2" style={{ backgroundColor: "#fafafa" }}>
+                      {groupMembers.map(m => {
+                        const mGoals = cg.filter(g => g.owner === m.id);
+                        const mAtRisk = mGoals.filter(g => ["yellow","red"].includes(getGoalStatus(g))).length;
+                        const isSelected = m.id === selectedMemberId;
+                        return (
+                          <button key={m.id} onClick={() => setSelectedMemberId(m.id)}
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl border transition-all"
+                            style={{
+                              borderColor: isSelected ? E3.accent : E3.border,
+                              backgroundColor: isSelected ? E3.accentLight : "white",
+                              boxShadow: isSelected ? `0 0 0 2px ${E3.accent}22` : "none",
+                            }}>
+                            <Avatar name={m.name} size={6} />
+                            <div className="text-left">
+                              <div className="text-xs font-black leading-tight" style={{ color: E3.navy }}>
+                                {m.name.split(" ")[0]}{" "}
+                                <span className="font-normal">{m.name.split(" ").slice(1).join(" ")}</span>
+                                {m.id === currentUser?.id && <span className="ml-1 font-normal" style={{ color: E3.accent }}>(you)</span>}
+                              </div>
+                              <div className="text-xs leading-tight" style={{ color: E3.muted }}>
+                                {m.title && <span>{m.title} · </span>}
+                                {mGoals.length} goal{mGoals.length !== 1 ? "s" : ""}
+                                {mAtRisk > 0 && <span className="font-black" style={{ color: "#dc2626" }}> · {mAtRisk} at risk</span>}
+                              </div>
+                            </div>
+                            {isSelected && <div className="w-1.5 h-1.5 rounded-full ml-0.5 flex-shrink-0" style={{ backgroundColor: E3.accent }} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                {isSelected && <div className="w-1.5 h-1.5 rounded-full ml-1 flex-shrink-0" style={{ backgroundColor: E3.accent }} />}
-              </button>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Add form — inline, appears below toggle */}
